@@ -247,8 +247,10 @@ function algorithm.alphabeta(grid, state, depth, alpha, beta, alphaMove, betaMov
     local enemy_moves = algorithm.neighbours( state['enemy']['coords'][1], grid )
     
     -- if i'm smaller than the enemy, never move to a square that the enemy can also move to
-    if #state['me']['coords'] <= #state['enemy']['coords'] then
-        my_moves = n_complement(my_moves, enemy_moves)
+    if state['me'] ~= state['enemy'] then
+        if #state['me']['coords'] <= #state['enemy']['coords'] then
+            my_moves = n_complement(my_moves, enemy_moves)
+        end
     end
     
     if maximizingPlayer then

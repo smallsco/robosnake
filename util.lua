@@ -117,7 +117,8 @@ end
 function util.convert_gamestate( gameState )
     
     local newState = {
-        game = gameState['game'],
+        you = gameState['you'],
+        game = gameState['game'] or gameState['game_id'],
         mode = gameState['mode'],
         turn = gameState['turn'],
         height = gameState['height'],
@@ -132,12 +133,16 @@ function util.convert_gamestate( gameState )
         table.insert( newState['food'], convert_coordinates( gameState['food'][i] ) )
     end
     
-    for i = 1, #gameState['walls'] do
-        table.insert( newState['walls'], convert_coordinates( gameState['walls'][i] ) )
+    if gameState['walls'] then
+        for i = 1, #gameState['walls'] do
+            table.insert( newState['walls'], convert_coordinates( gameState['walls'][i] ) )
+        end
     end
     
-    for i = 1, #gameState['gold'] do
-        table.insert( newState['gold'], convert_coordinates( gameState['gold'][i] ) )
+    if gameState['gold'] then
+        for i = 1, #gameState['gold'] do
+            table.insert( newState['gold'], convert_coordinates( gameState['gold'][i] ) )
+        end
     end
     
     for i = 1, #gameState['snakes'] do
@@ -148,11 +153,11 @@ function util.convert_gamestate( gameState )
             message = gameState['snakes'][i]['message'],
             taunt = gameState['snakes'][i]['taunt'],
             age = gameState['snakes'][i]['age'],
-            health = gameState['snakes'][i]['health'],
+            health = gameState['snakes'][i]['health'] or gameState['snakes'][i]['health_points'],
             coords = {},
             kills = gameState['snakes'][i]['kills'],
             food = gameState['snakes'][i]['food'],
-            gold = gameState['snakes'][i]['gold']
+            gold = gameState['snakes'][i]['gold'] or 0
         }
         for j = 1, #gameState['snakes'][i]['coords'] do
             table.insert( newSnake['coords'], convert_coordinates( gameState['snakes'][i]['coords'][j] ) )
@@ -170,13 +175,29 @@ end
 -- @return string The name of the direction
 function util.direction( src, dst )
     if dst[1] == src[1]+1 and dst[2] == src[2] then
-        return 'east'
+        if RULES_VERSION == 2016 then
+            return 'east'
+        elseif RULES_VERSION == 2017 then
+            return 'right'
+        end
     elseif dst[1] == src[1]-1 and dst[2] == src[2] then
-        return 'west'
+        if RULES_VERSION == 2016 then
+            return 'west'
+        elseif RULES_VERSION == 2017 then
+            return 'left'
+        end
     elseif dst[1] == src[1] and dst[2] == src[2]+1 then
-        return 'south'
+        if RULES_VERSION == 2016 then
+            return 'south'
+        elseif RULES_VERSION == 2017 then
+            return 'down'
+        end
     elseif dst[1] == src[1] and dst[2] == src[2]-1 then
-        return 'north'
+        if RULES_VERSION == 2016 then
+            return 'north'
+        elseif RULES_VERSION == 2017 then
+            return 'up'
+        end
     end
 end
 

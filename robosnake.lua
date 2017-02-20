@@ -48,16 +48,26 @@ if #gameState['snakes'] > 2 then
     log( DEBUG, "WARNING: Multiple enemies detected. Choosing the closest snake for behavior prediction." )
 end
 
+-- Who am I?
+local id = gameState['you']
+if not id then
+    id = SNAKE_ID
+end
+
 -- Convenience vars
 local me, enemy
 local distance = 99999
 for i = 1, #gameState['snakes'] do
-    if gameState['snakes'][i]['id'] == SNAKE_ID then
+    if gameState['snakes'][i]['id'] == id then
         me = gameState['snakes'][i]
     end
 end
+if not me then
+    log( DEBUG, "FATAL: Can't find myself on the game board." )
+    ngx.exit( ngx.HTTP_INTERNAL_SERVER_ERROR )
+end
 for i = 1, #gameState['snakes'] do
-    if gameState['snakes'][i]['id'] ~= SNAKE_ID then
+    if gameState['snakes'][i]['id'] ~= id then
         if gameState['snakes'][i]['status'] == 'alive' then
             local d = mdist( me['coords'][1], gameState['snakes'][i]['coords'][1] )
             if d < distance then
@@ -67,6 +77,14 @@ for i = 1, #gameState['snakes'] do
         end
     end
 end
+
+-- This is just to keep from crashing if we're testing in an arena by ourselves
+-- though I am curious to see what will happen when trying to predict my own behavior!
+if not enemy then
+    log( DEBUG, "WARNING: I am the only snake in the game! Using MYSELF for behavior prediction." )
+    enemy = me
+end
+
 log( DEBUG, 'Enemy Snake: ' .. enemy['name'] )
 local myState = {
     me = me,
