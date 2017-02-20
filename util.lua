@@ -181,6 +181,17 @@ function util.direction( src, dst )
 end
 
 
+--- Calculates the manhattan distance between two coordinate pairs
+-- @param table src The source coordinate pair
+-- @param table dst The destination coordinate pair
+-- @return int The distance between the pairs
+function util.mdist( src, dst )
+    local dx = math.abs( src[1] - dst[1] )
+    local dy = math.abs( src[2] - dst[2] )
+    return ( dx + dy )
+end
+
+
 -- @see https://github.com/vadi2/mudlet-lua/blob/2630cbeefc3faef3079556cb06459d1f53b8f842/lua/TableUtils.lua#L332
 function util.n_complement(set1, set2)
     if not set1 and set2 then return false end

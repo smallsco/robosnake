@@ -5,6 +5,7 @@ local algorithm = {}
 -- are faster if you create a local reference to that function.
 local DEBUG = ngx.DEBUG
 local log = ngx.log
+local mdist = util.mdist
 local n_complement = util.n_complement
 local printWorldMap = util.printWorldMap
 
@@ -56,17 +57,6 @@ local function floodfill( pos, grid, numSafe )
         end
     end
     return numSafe
-end
-
-
---- Calculates the manhattan distance between two coordinate pairs
--- @param table src The source coordinate pair
--- @param table dst The destination coordinate pair
--- @return int The distance between the pairs
-local function mdist( src, dst )
-    local dx = math.abs( src[1] - dst[1] )
-    local dy = math.abs( src[2] - dst[2] )
-    return ( dx + dy )
 end
 
 

@@ -14,6 +14,7 @@
 -- are faster if you create a local reference to that function.
 local DEBUG = ngx.DEBUG
 local log = ngx.log
+local mdist = util.mdist
 local neighbours = algorithm.neighbours
 local now = ngx.now
 local update_time = ngx.update_time
@@ -41,14 +42,15 @@ util.printWorldMap( grid )
 -- This snake makes use of alpha-beta pruning to advance the gamestate
 -- and predict enemy behavior. However, it only works for a single
 -- enemy. While you can put it into a game with multiple snakes, it
--- will only look at the first living enemy when deciding the next move
+-- will only look at the closest enemy when deciding the next move
 -- to make.
 if #gameState['snakes'] > 2 then
-    log( DEBUG, "WARNING: Multiple enemies detected. My behavior will be undefined." )
+    log( DEBUG, "WARNING: Multiple enemies detected. Choosing the closest snake for behavior prediction." )
 end
 
 -- Convenience vars
 local me, enemy
+local distance = 99999
 for i = 1, #gameState['snakes'] do
     if gameState['snakes'][i]['id'] == SNAKE_ID then
         me = gameState['snakes'][i]
@@ -57,11 +59,15 @@ end
 for i = 1, #gameState['snakes'] do
     if gameState['snakes'][i]['id'] ~= SNAKE_ID then
         if gameState['snakes'][i]['status'] == 'alive' then
-            enemy = gameState['snakes'][i]
-            break
+            local d = mdist( me['coords'][1], gameState['snakes'][i]['coords'][1] )
+            if d < distance then
+                distance = d
+                enemy = gameState['snakes'][i]
+            end
         end
     end
 end
+log( DEBUG, 'Enemy Snake: ' .. enemy['name'] )
 local myState = {
     me = me,
     enemy = enemy
