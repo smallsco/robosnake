@@ -68,7 +68,15 @@ if not me then
 end
 for i = 1, #gameState['snakes'] do
     if gameState['snakes'][i]['id'] ~= id then
-        if gameState['snakes'][i]['status'] == 'alive' then
+        if RULES_VERSION == 2016 then
+            if gameState['snakes'][i]['status'] == 'alive' then
+                local d = mdist( me['coords'][1], gameState['snakes'][i]['coords'][1] )
+                if d < distance then
+                    distance = d
+                    enemy = gameState['snakes'][i]
+                end
+            end
+        elseif RULES_VERSION == 2017 then
             local d = mdist( me['coords'][1], gameState['snakes'][i]['coords'][1] )
             if d < distance then
                 distance = d
