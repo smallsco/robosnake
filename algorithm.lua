@@ -286,15 +286,15 @@ function algorithm.alphabeta(grid, state, depth, alpha, beta, alphaMove, betaMov
                 table.remove( new_state['me']['coords'] )
                 new_state['me']['health'] = new_state['me']['health'] - 1
             else
-                if RULES_VERSION == 2017 then
-                    new_state['me']['health'] = 100
-                else
+                --if RULES_VERSION == 2017 then
+                --    new_state['me']['health'] = 100
+                --else
                     if new_state['me']['health'] < 70 then
                         new_state['me']['health'] = new_state['me']['health'] + 30
                     else
                         new_state['me']['health'] = 100
                     end
-                end
+                --end
             end
             if new_grid[new_state['me']['coords'][1][2]][new_state['me']['coords'][1][1]] == '$' then
                 new_state['me']['gold'] = new_state['me']['gold'] + 1
@@ -327,15 +327,15 @@ function algorithm.alphabeta(grid, state, depth, alpha, beta, alphaMove, betaMov
                 table.remove( new_state['enemy']['coords'] )
                 new_state['enemy']['health'] = new_state['enemy']['health'] - 1
             else
-                if RULES_VERSION == 2017 then
-                    new_state['enemy']['health'] = 100
-                else
+                --if RULES_VERSION == 2017 then
+                --    new_state['enemy']['health'] = 100
+                --else
                     if new_state['enemy']['health'] < 70 then
                         new_state['enemy']['health'] = new_state['enemy']['health'] + 30
                     else
                         new_state['enemy']['health'] = 100
                     end
-                end
+                --end
             end
             if new_grid[new_state['enemy']['coords'][1][2]][new_state['enemy']['coords'][1][1]] == '$' then
                 new_state['enemy']['gold'] = new_state['enemy']['gold'] + 1
