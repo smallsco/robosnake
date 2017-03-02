@@ -43,9 +43,17 @@ local function isSafeSquare(v)
 end
 
 
--- this ruins the grid, make sure you always work on a copy of the grid
+-- "Floods" the grid in order to find out how many squares are accessible to us
+-- This ruins the grid, make sure you always work on a deepcopy of the grid!
 -- @see https://en.wikipedia.org/wiki/Flood_fill#Stack-based_recursive_implementation_.28four-way.29
 local function floodfill( pos, grid, numSafe )
+
+    -- If we can see 20% of the board, assume we can see the whole board
+    -- Floodfill (during minimax recursion) is an expensive operation so this is a huge performance win
+    if numSafe > ( #grid * #grid[1] )/5 then
+        return numSafe
+    end
+
     local y = pos[2]
     local x = pos[1]
     if isSafeSquare(grid[y][x]) then
@@ -67,63 +75,69 @@ end
 -- @param enemy_moves Table containing enemy's possible moves
 local function heuristic( grid, state, my_moves, enemy_moves )
 
+    -- My win/loss conditions
     if #my_moves == 0 then
         log( DEBUG, 'I am trapped.' )
         return -2147483648
     end
-    
-    if #enemy_moves == 0 then
-        log( DEBUG, 'Enemy is trapped.' )
-        return 2147483647
-    end
-    
     if state['me']['health'] <= 0 then
         log( DEBUG, 'I am out of health.' )
         return -2147483648
     end
-    
-    if state['enemy']['health'] <= 0 then
-        log( DEBUG, 'Enemy is out of health.' )
-        return 2147483647
-    end
-    
     if state['me']['gold'] >= 5 then
         log( DEBUG, 'I got all the gold.' )
         return 2147483647
     end
     
-    if state['enemy']['gold'] >= 5 then
-        log( DEBUG, 'Enemy got all the gold.' )
-        return -2147483648
-    end
+    -- The floodfill heuristic should never be used alone as it will always avoid food!
+    -- The reason for this is that food increases our length by one, causing one less
+    -- square on the board to be available for movement.
     
-    -- honestly floodfill heuristic alone is pretty terrible
-    -- it will always avoid food, since food increases your length,
-    -- and thus making less squares available
+    -- Run a floodfill from my current position, to find out:
+    -- 1) How many squares can I reach from this position?
+    -- 2) What percentage of the board does that represent?
     local floodfill_grid = deepcopy(grid)
     floodfill_grid[state['me']['coords'][1][2]][state['me']['coords'][1][1]] = '.'
     local accessible_squares = floodfill( state['me']['coords'][1], floodfill_grid, 0 )
     local percent_accessible = accessible_squares / ( #grid * #grid[1] )
     
-    -- FAILSAFE: If there are less accessible squares than my length, never go there
-    -- this is to address a race condition with the earlier logic where a square
-    -- that will trap us ranks highly if it also contains food (since food weights get 0'ed)
+    -- If the number of squares I can see from my current position is less than my length
+    -- then moving to this position *may* trap and kill us, and should be avoided if possible
     if accessible_squares <= #state['me']['coords'] then
         log( DEBUG, 'I smell a trap!' )
         return -9999999 * (1/percent_accessible)
     end
     
-    -- honestly floodfill heuristic alone is pretty terrible
-    -- it will always avoid food, since food increases your length,
-    -- and thus making less squares available
+    
+    -- Enemy win/loss conditions
+    if #enemy_moves == 0 then
+        log( DEBUG, 'Enemy is trapped.' )
+        return 2147483647
+    end
+    if state['enemy']['health'] <= 0 then
+        log( DEBUG, 'Enemy is out of health.' )
+        return 2147483647
+    end
+    if state['enemy']['gold'] >= 5 then
+        log( DEBUG, 'Enemy got all the gold.' )
+        return -2147483648
+    end
+    
+    -- Run a floodfill from the enemy's current position, to find out:
+    -- 1) How many squares can the enemy reach from this position?
+    -- 2) What percentage of the board does that represent?
     local enemy_floodfill_grid = deepcopy(grid)
     enemy_floodfill_grid[state['enemy']['coords'][1][2]][state['enemy']['coords'][1][1]] = '.'
     local enemy_accessible_squares = floodfill( state['enemy']['coords'][1], enemy_floodfill_grid, 0 )
     local enemy_percent_accessible = enemy_accessible_squares / ( #grid * #grid[1] )
+    
+    -- If the number of squares the enemy can see from their current position is less than their length
+    -- then moving to this position *may* trap and kill them, and should be avoided if possible
     if enemy_accessible_squares <= #state['enemy']['coords'] then
         log( DEBUG, 'Enemy might be trapped!' )
         return 9999999 * percent_accessible
     end
+    
     
     -- get food/gold from grid since it's a pain to update state every time we pass through minimax
     local food = {}
