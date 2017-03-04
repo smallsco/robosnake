@@ -137,10 +137,7 @@ log( DEBUG, string.format( 'Decision: Moving %s to [%s,%s]', dir, bestMove[1], b
 
 
 -- Return response to the arena
-local response = { move = dir }
-if gameState['turn'] % 10 == 0 then
-    response['taunt'] = util.bieberQuote()
-end
+local response = { move = dir, taunt = util.bieberQuote() }
 ngx.print( cjson.encode(response) )
 
 
