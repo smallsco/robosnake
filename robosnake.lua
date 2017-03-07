@@ -7,6 +7,7 @@
     
     @author Scott Small <scott.small@rdbrck.com>
     @copyright 2017 Redbrick Technologies, Inc.
+    @license MIT
 ]]
 
 

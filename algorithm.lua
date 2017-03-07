@@ -48,12 +48,6 @@ end
 -- @see https://en.wikipedia.org/wiki/Flood_fill#Stack-based_recursive_implementation_.28four-way.29
 local function floodfill( pos, grid, numSafe )
 
-    -- If we can see 20% of the board, assume we can see the whole board
-    -- Floodfill (during minimax recursion) is an expensive operation so this is a huge performance win
-    --if numSafe > ( #grid * #grid[1] )/5 then
-    --    return numSafe
-    --end
-
     local y = pos[2]
     local x = pos[1]
     if isSafeSquare(grid[y][x]) then
@@ -180,13 +174,8 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     local dist = mdist( state['me']['coords'][1], {center_x, center_y} )
     score = score - (dist * 100)
     log( DEBUG, string.format('Center distance %s, score %s', dist, dist*100 ) )
-
-    
-    -- If I'm not hungry and there's no gold on the board, then keep some distance from the enemy
-    --[[local dist = mdist( state['me']['coords'][1], state['enemy']['coords'][1] )
-    score = score + (dist * 1000)
-    log( DEBUG, string.format('Enemy distance %s, score %s', dist, dist*1000 ) )]]
-    
+   
+ 
     log( DEBUG, 'Original score: ' .. score )
     log( DEBUG, 'Percent accessible: ' .. percent_accessible )
     if score < 0 then
