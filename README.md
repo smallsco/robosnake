@@ -6,9 +6,7 @@
 ```
 
 ## About
-The Robosnake is [Redbrick](http://www.rdbrck.com)'s bounty snake entry for the 2017 [Battlesnake](http://www.battlesnake.io) AI programming competition. Go play it at http://bountysnake2017.rdbrck.com using your favorite Battlesnake client!
-
-Written with [Lua](https://www.lua.org/) and designed to be run under [OpenResty](http://openresty.org/).
+The Robosnake is [Redbrick](http://www.rdbrck.com)'s bounty snake entry for the 2017 [Battlesnake](http://www.battlesnake.io) AI programming competition. It is written using [Lua](https://www.lua.org/) and designed to be run under [OpenResty](http://openresty.org/).
 
 ## Strategy
 The Robosnake makes use of [alpha-beta pruning](https://en.wikipedia.org/wiki/Alpha%E2%80%93beta_pruning) in order to make predictions about the future state of the game. All possible moves by ourselves are evaluated, as well as all possible moves by the enemy. The Robosnake will always select for itself the move that results in the best possible state of the game board, and it will select for the enemy the move that results in the worst possible state of the game board (from the Robosnake's point of view, that is).
@@ -26,6 +24,8 @@ In order to evaluate a particular game board state, we look at the following met
 In the event that we're playing in an arena containing more than one enemy snake, the closest snake to the Robosnake will be chosen as the "enemy" for the purposes of algorithmic computation.
 
 In the event that we're playing in an empty arena, the Robosnake will choose *itself* as the "enemy". This will often lead to hilarity.
+
+A blog post that talks about the strategy in depth is coming soon.
 
 
 ## Configuration
