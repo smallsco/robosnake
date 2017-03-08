@@ -6,7 +6,7 @@
 ```
 
 ## About
-The Robosnake is [Redbrick](http://www.rdbrck.com)'s bounty snake entry for the 2017 [Battlesnake](http://www.battlesnake.io) AI programming competition. It is written using [Lua](https://www.lua.org/) and designed to be run under [OpenResty](http://openresty.org/).
+The Robosnake was [Redbrick](http://www.rdbrck.com)'s bounty snake entry for the 2017 [Battlesnake](http://www.battlesnake.io) AI programming competition. It is written using [Lua](https://www.lua.org/) and designed to be run under [OpenResty](http://openresty.org/).
 
 Our win conditions to claim the bounty were the following:
 * Game is played on a 17 x 17 board
