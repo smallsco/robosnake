@@ -34,7 +34,7 @@ In the event that we're playing in an arena containing more than one enemy snake
 
 In the event that we're playing in an empty arena, the Robosnake will choose *itself* as the "enemy". This will often lead to hilarity.
 
-A blog post that talks about the strategy in depth is coming soon.
+A blog post that talks about the strategy in depth is here: https://rdbrck.com/2017/03/building-bounty-snake-post-mortem/
 
 
 ## Configuration
