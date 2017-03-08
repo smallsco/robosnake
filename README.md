@@ -8,6 +8,15 @@
 ## About
 The Robosnake is [Redbrick](http://www.rdbrck.com)'s bounty snake entry for the 2017 [Battlesnake](http://www.battlesnake.io) AI programming competition. It is written using [Lua](https://www.lua.org/) and designed to be run under [OpenResty](http://openresty.org/).
 
+Our win conditions to claim the bounty were the following:
+* Game is played on a 17 x 17 board
+* 10 food are present on the board, at any given time
+* API timeout of 1 second
+* One-versus-one, last snake slithering wins the bounty.
+
+Under these conditions, we won forty-two games and lost three, for a total win record of 42/45 or 93%.
+
+
 ## Strategy
 The Robosnake makes use of [alpha-beta pruning](https://en.wikipedia.org/wiki/Alpha%E2%80%93beta_pruning) in order to make predictions about the future state of the game. All possible moves by ourselves are evaluated, as well as all possible moves by the enemy. The Robosnake will always select for itself the move that results in the best possible state of the game board, and it will select for the enemy the move that results in the worst possible state of the game board (from the Robosnake's point of view, that is).
 
