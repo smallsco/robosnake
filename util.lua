@@ -59,7 +59,7 @@ end
 
 --- Take the BattleSnake arena's state JSON and use it to create our own grid
 -- @param gameState The arena's game state JSON
--- @return A 2D table with each cell mapped to food, walls, snakes, etc.
+-- @return A 2D table with each cell mapped to food, snakes, etc.
 function util.buildWorldMap( gameState )
     
     -- Generate the tile grid
@@ -70,20 +70,6 @@ function util.buildWorldMap( gameState )
         for x = 1, gameState['width'] do
             grid[y][x] = '.'
         end
-    end
-    
-    -- Place walls
-    for i = 1, #gameState['walls'] do
-        local wall = gameState['walls'][i]
-        grid[wall[2]][wall[1]] = 'X'
-        log( DEBUG, string.format('Placed wall at [%s, %s]', wall[1], wall[2]) )
-    end
-    
-    -- Place gold
-    for i = 1, #gameState['gold'] do
-        local gold = gameState['gold'][i]
-        grid[gold[2]][gold[1]] = '$'
-        log( DEBUG, string.format('Placed gold at [%s, %s]', gold[1], gold[2]) )
     end
     
     -- Place food
@@ -118,46 +104,25 @@ function util.convert_gamestate( gameState )
     
     local newState = {
         you = gameState['you'],
-        game = gameState['game'] or gameState['game_id'],
-        mode = gameState['mode'],
+        game = gameState['game_id'],
         turn = gameState['turn'],
         height = gameState['height'],
         width = gameState['width'],
         snakes = {},
-        food = {},
-        walls = {},
-        gold = {}
+        food = {}
     }
     
     for i = 1, #gameState['food'] do
         table.insert( newState['food'], convert_coordinates( gameState['food'][i] ) )
     end
     
-    if gameState['walls'] then
-        for i = 1, #gameState['walls'] do
-            table.insert( newState['walls'], convert_coordinates( gameState['walls'][i] ) )
-        end
-    end
-    
-    if gameState['gold'] then
-        for i = 1, #gameState['gold'] do
-            table.insert( newState['gold'], convert_coordinates( gameState['gold'][i] ) )
-        end
-    end
-    
     for i = 1, #gameState['snakes'] do
         local newSnake = {
             id = gameState['snakes'][i]['id'],
             name = gameState['snakes'][i]['name'],
-            status = gameState['snakes'][i]['status'],
-            message = gameState['snakes'][i]['message'],
             taunt = gameState['snakes'][i]['taunt'],
-            age = gameState['snakes'][i]['age'],
-            health = gameState['snakes'][i]['health'] or gameState['snakes'][i]['health_points'],
-            coords = {},
-            kills = gameState['snakes'][i]['kills'],
-            food = gameState['snakes'][i]['food'],
-            gold = gameState['snakes'][i]['gold'] or 0
+            health = gameState['snakes'][i]['health_points'],
+            coords = {}
         }
         for j = 1, #gameState['snakes'][i]['coords'] do
             table.insert( newSnake['coords'], convert_coordinates( gameState['snakes'][i]['coords'][j] ) )
@@ -175,29 +140,13 @@ end
 -- @return string The name of the direction
 function util.direction( src, dst )
     if dst[1] == src[1]+1 and dst[2] == src[2] then
-        if RULES_VERSION == 2016 then
-            return 'east'
-        elseif RULES_VERSION == 2017 then
-            return 'right'
-        end
+        return 'right'
     elseif dst[1] == src[1]-1 and dst[2] == src[2] then
-        if RULES_VERSION == 2016 then
-            return 'west'
-        elseif RULES_VERSION == 2017 then
-            return 'left'
-        end
+        return 'left'
     elseif dst[1] == src[1] and dst[2] == src[2]+1 then
-        if RULES_VERSION == 2016 then
-            return 'south'
-        elseif RULES_VERSION == 2017 then
-            return 'down'
-        end
+        return 'down'
     elseif dst[1] == src[1] and dst[2] == src[2]-1 then
-        if RULES_VERSION == 2016 then
-            return 'north'
-        elseif RULES_VERSION == 2017 then
-            return 'up'
-        end
+        return 'up'
     end
 end
 

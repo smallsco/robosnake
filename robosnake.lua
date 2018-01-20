@@ -1,4 +1,8 @@
 --[[
+                    _______  _____  __   _       _____  _______            
+                    |______ |     | | \  |      |     | |______            
+                    ______| |_____| |  \_|      |_____| |                  
+                                                                           
       ______  _____  ______   _____  _______ __   _ _______ _     _ _______
      |_____/ |     | |_____] |     | |______ | \  | |_____| |____/  |______
      |    \_ |_____| |_____] |_____| ______| |  \_| |     | |    \_ |______
@@ -6,7 +10,9 @@
     -----------------------------------------------------------------------
     
     @author Scott Small <scott.small@rdbrck.com>
-    @copyright 2017 Redbrick Technologies, Inc.
+    @author Tyler Sebastian <tyler.sebastian@rdbrck.com>
+    @author Erika Burdon <erika.burdon@rdbrck.com>
+    @copyright 2017-2018 Redbrick Technologies, Inc.
     @license MIT
 ]]
 
@@ -52,7 +58,8 @@ end
 -- Who am I?
 local id = gameState['you']
 if not id then
-    id = SNAKE_ID
+    log( DEBUG, "FATAL: Can't find my ID." )
+    ngx.exit( ngx.HTTP_INTERNAL_SERVER_ERROR )
 end
 
 -- Convenience vars
@@ -69,20 +76,10 @@ if not me then
 end
 for i = 1, #gameState['snakes'] do
     if gameState['snakes'][i]['id'] ~= id then
-        if RULES_VERSION == 2016 then
-            if gameState['snakes'][i]['status'] == 'alive' then
-                local d = mdist( me['coords'][1], gameState['snakes'][i]['coords'][1] )
-                if d < distance then
-                    distance = d
-                    enemy = gameState['snakes'][i]
-                end
-            end
-        elseif RULES_VERSION == 2017 then
-            local d = mdist( me['coords'][1], gameState['snakes'][i]['coords'][1] )
-            if d < distance then
-                distance = d
-                enemy = gameState['snakes'][i]
-            end
+        local d = mdist( me['coords'][1], gameState['snakes'][i]['coords'][1] )
+        if d < distance then
+            distance = d
+            enemy = gameState['snakes'][i]
         end
     end
 end

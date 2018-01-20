@@ -78,10 +78,6 @@ local function heuristic( grid, state, my_moves, enemy_moves )
         log( DEBUG, 'I am out of health.' )
         return -2147483648
     end
-    if state['me']['gold'] >= 5 then
-        log( DEBUG, 'I got all the gold.' )
-        return 2147483647
-    end
     
     -- The floodfill heuristic should never be used alone as it will always avoid food!
     -- The reason for this is that food increases our length by one, causing one less
@@ -112,10 +108,6 @@ local function heuristic( grid, state, my_moves, enemy_moves )
         log( DEBUG, 'Enemy is out of health.' )
         return 2147483647
     end
-    if state['enemy']['gold'] >= 5 then
-        log( DEBUG, 'Enemy got all the gold.' )
-        return -2147483648
-    end
     
     -- Run a floodfill from the enemy's current position, to find out:
     -- 1) How many squares can the enemy reach from this position?
@@ -133,15 +125,12 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     end
     
     
-    -- get food/gold from grid since it's a pain to update state every time we pass through minimax
+    -- get food from grid since it's a pain to update state every time we pass through minimax
     local food = {}
-    local gold = {}
     for y = 1, #grid do
         for x = 1, #grid[y] do
             if grid[y][x] == 'O' then
                 table.insert(food, {x, y})
-            elseif grid[y][x] == '$' then
-                table.insert(gold, {x, y})
             end
         end
     end
@@ -161,13 +150,6 @@ local function heuristic( grid, state, my_moves, enemy_moves )
         --local dist = mdist( {center_x, center_y}, food[i] )
         score = score - ( dist * foodWeight )
         log( DEBUG, string.format('Food %s, distance %s, score %s', inspect(food[i]), dist, (dist*foodWeight) ) )
-    end
-    
-    -- If there's gold on the board, weight it highly... go for it unless I'm REALLY hungry
-    for i = 1, #gold do
-        local dist = mdist( state['me']['coords'][1], gold[i] )
-        score = score - (dist * 5000)
-        log( DEBUG, string.format('Gold %s, distance %s, score %s', inspect(gold[i]), dist, (dist * 5000) ) )
     end
 
     -- Hang out near the center
@@ -268,9 +250,7 @@ function algorithm.alphabeta(grid, state, depth, alpha, beta, alphaMove, betaMov
         -- short circuit win/loss conditions
         #moves == 0 or
         state['me']['health'] <= 0 or
-        state['enemy']['health'] <= 0 or
-        state['me']['gold'] >= 5 or
-        state['enemy']['gold'] >= 5
+        state['enemy']['health'] <= 0 
     then
         return heuristic( grid, state, my_moves, enemy_moves )
     end
@@ -289,18 +269,7 @@ function algorithm.alphabeta(grid, state, depth, alpha, beta, alphaMove, betaMov
                 table.remove( new_state['me']['coords'] )
                 new_state['me']['health'] = new_state['me']['health'] - 1
             else
-                if RULES_VERSION == 2017 then
-                    new_state['me']['health'] = 100
-                else
-                    if new_state['me']['health'] < 70 then
-                        new_state['me']['health'] = new_state['me']['health'] + 30
-                    else
-                        new_state['me']['health'] = 100
-                    end
-                end
-            end
-            if new_grid[new_state['me']['coords'][1][2]][new_state['me']['coords'][1][1]] == '$' then
-                new_state['me']['gold'] = new_state['me']['gold'] + 1
+                new_state['me']['health'] = 100
             end
             new_grid[new_state['me']['coords'][1][2]][new_state['me']['coords'][1][1]] = '@'
             if #new_state['me']['coords'] > 1 then
@@ -330,18 +299,7 @@ function algorithm.alphabeta(grid, state, depth, alpha, beta, alphaMove, betaMov
                 table.remove( new_state['enemy']['coords'] )
                 new_state['enemy']['health'] = new_state['enemy']['health'] - 1
             else
-                if RULES_VERSION == 2017 then
-                    new_state['enemy']['health'] = 100
-                else
-                    if new_state['enemy']['health'] < 70 then
-                        new_state['enemy']['health'] = new_state['enemy']['health'] + 30
-                    else
-                        new_state['enemy']['health'] = 100
-                    end
-                end
-            end
-            if new_grid[new_state['enemy']['coords'][1][2]][new_state['enemy']['coords'][1][1]] == '$' then
-                new_state['enemy']['gold'] = new_state['enemy']['gold'] + 1
+                new_state['enemy']['health'] = 100
             end
             new_grid[new_state['enemy']['coords'][1][2]][new_state['enemy']['coords'][1][1]] = '@'
             if #new_state['enemy']['coords'] > 1 then
