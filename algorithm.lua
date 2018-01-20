@@ -39,7 +39,7 @@ end
 -- @param v The value of a particular tile on the grid
 -- @return boolean
 local function isSafeSquare(v)
-    return v == '.' or v == '$' or v == 'O' 
+    return v == '.' or v == 'O' 
 end
 
 
@@ -48,8 +48,8 @@ end
 -- @see https://en.wikipedia.org/wiki/Flood_fill#Stack-based_recursive_implementation_.28four-way.29
 local function floodfill( pos, grid, numSafe )
 
-    local y = pos[2]
-    local x = pos[1]
+    local y = pos[ 'y' ]
+    local x = pos[ 'x' ]
     if isSafeSquare(grid[y][x]) then
         grid[y][x] = 1
         numSafe = numSafe + 1
@@ -74,7 +74,7 @@ local function heuristic( grid, state, my_moves, enemy_moves )
         log( DEBUG, 'I am trapped.' )
         return -2147483648
     end
-    if state['me']['health'] <= 0 then
+    if state[ 'me' ][ 'health' ] <= 0 then
         log( DEBUG, 'I am out of health.' )
         return -2147483648
     end
@@ -87,13 +87,13 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     -- 1) How many squares can I reach from this position?
     -- 2) What percentage of the board does that represent?
     local floodfill_grid = deepcopy(grid)
-    floodfill_grid[state['me']['coords'][1][2]][state['me']['coords'][1][1]] = '.'
-    local accessible_squares = floodfill( state['me']['coords'][1], floodfill_grid, 0 )
+    floodfill_grid[ state[ 'me' ][ 'body' ][ 'data' ][1][ 'y' ] ][ state[ 'me' ][ 'body' ][ 'data' ][1][ 'x' ] ] = '.'
+    local accessible_squares = floodfill( state[ 'me' ][ 'body' ][ 'data' ][1], floodfill_grid, 0 )
     local percent_accessible = accessible_squares / ( #grid * #grid[1] )
     
     -- If the number of squares I can see from my current position is less than my length
     -- then moving to this position *may* trap and kill us, and should be avoided if possible
-    if accessible_squares <= #state['me']['coords'] then
+    if accessible_squares <= #state[ 'me' ][ 'body' ][ 'data' ] then
         log( DEBUG, 'I smell a trap!' )
         return -9999999 * (1/percent_accessible)
     end
@@ -104,7 +104,7 @@ local function heuristic( grid, state, my_moves, enemy_moves )
         log( DEBUG, 'Enemy is trapped.' )
         return 2147483647
     end
-    if state['enemy']['health'] <= 0 then
+    if state[ 'enemy' ][ 'health' ] <= 0 then
         log( DEBUG, 'Enemy is out of health.' )
         return 2147483647
     end
@@ -113,13 +113,13 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     -- 1) How many squares can the enemy reach from this position?
     -- 2) What percentage of the board does that represent?
     local enemy_floodfill_grid = deepcopy(grid)
-    enemy_floodfill_grid[state['enemy']['coords'][1][2]][state['enemy']['coords'][1][1]] = '.'
-    local enemy_accessible_squares = floodfill( state['enemy']['coords'][1], enemy_floodfill_grid, 0 )
+    enemy_floodfill_grid[ state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'y' ] ][ state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'x' ] ] = '.'
+    local enemy_accessible_squares = floodfill( state[ 'enemy' ][ 'body' ][ 'data' ][1], enemy_floodfill_grid, 0 )
     local enemy_percent_accessible = enemy_accessible_squares / ( #grid * #grid[1] )
     
     -- If the number of squares the enemy can see from their current position is less than their length
     -- then moving to this position *may* trap and kill them, and should be avoided if possible
-    if enemy_accessible_squares <= #state['enemy']['coords'] then
+    if enemy_accessible_squares <= #state[ 'enemy' ][ 'body' ][ 'data' ] then
         log( DEBUG, 'Enemy might be trapped!' )
         return 9999999 * percent_accessible
     end
@@ -130,7 +130,7 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     for y = 1, #grid do
         for x = 1, #grid[y] do
             if grid[y][x] == 'O' then
-                table.insert(food, {x, y})
+                table.insert( food, { x = x, y = y } )
             end
         end
     end
@@ -143,17 +143,17 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     
     -- If there's food on the board, and I'm hungry, go for it
     -- If I'm not hungry, ignore it
-    local foodWeight = 100 - state['me']['health']
+    local foodWeight = 100 - state[ 'me' ][ 'health' ]
     log( DEBUG, 'Food Weight: ' .. foodWeight )
     for i = 1, #food do
-        local dist = mdist( state['me']['coords'][1], food[i] )
-        --local dist = mdist( {center_x, center_y}, food[i] )
+        local dist = mdist( state[ 'me' ][ 'body' ][ 'data' ][1], food[i] )
+        --local dist = mdist( { x = center_x, y = center_y }, food[i] )
         score = score - ( dist * foodWeight )
         log( DEBUG, string.format('Food %s, distance %s, score %s', inspect(food[i]), dist, (dist*foodWeight) ) )
     end
 
     -- Hang out near the center
-    local dist = mdist( state['me']['coords'][1], {center_x, center_y} )
+    local dist = mdist( state[ 'me' ][ 'body' ][ 'data' ][1], { x = center_x, y = center_y } )
     score = score - (dist * 100)
     log( DEBUG, string.format('Center distance %s, score %s', dist, dist*100 ) )
    
@@ -182,24 +182,24 @@ end
 -- @return table The neighbours of the source coordinate pair
 function algorithm.neighbours( pos, grid )
     local neighbours = {}
-    local north = {pos[1], pos[2]-1}
-    local south = {pos[1], pos[2]+1}
-    local east = {pos[1]+1, pos[2]}
-    local west = {pos[1]-1, pos[2]}
+    local north = { x = pos[ 'x' ], y = pos[ 'y' ] - 1 }
+    local south = { x = pos[ 'x' ], y = pos[ 'y' ] + 1 }
+    local east = { x = pos[ 'x' ] + 1, y = pos[ 'y' ] }
+    local west = { x = pos[ 'x' ] - 1, y = pos[ 'y' ] }
     
     local height = #grid
     local width = #grid[1]
     
-    if north[2] > 0 and north[2] <= height and isSafeSquare(grid[north[2]][north[1]]) then
+    if north[ 'y' ] > 0 and north[ 'y' ] <= height and isSafeSquare( grid[ north[ 'y' ] ][ north[ 'x' ] ] ) then
         table.insert( neighbours, north )
     end
-    if south[2] > 0 and south[2] <= height and isSafeSquare(grid[south[2]][south[1]]) then
+    if south[ 'y' ] > 0 and south[ 'y' ] <= height and isSafeSquare( grid[ south[ 'y' ] ][ south[ 'x' ] ] ) then
         table.insert( neighbours, south )
     end
-    if east[1] > 0 and east[1] <= width and isSafeSquare(grid[east[2]][east[1]]) then
+    if east[ 'x' ] > 0 and east[ 'x' ] <= width and isSafeSquare( grid[ east[ 'y' ] ][ east[ 'x' ] ] ) then
         table.insert( neighbours, east )
     end
-    if west[1] > 0 and west[1] <= width and isSafeSquare(grid[west[2]][west[1]]) then
+    if west[ 'x' ] > 0 and west[ 'x' ] <= width and isSafeSquare( grid[ west[ 'y' ] ][ west[ 'x' ] ] ) then
         table.insert( neighbours, west )
     end
     
@@ -221,27 +221,27 @@ end
 -- @param alphaMove The best move at the current depth
 -- @param betaMove The worst move at the current depth
 -- @param maximizingPlayer True if calculating alpha at this depth, false if calculating beta
-function algorithm.alphabeta(grid, state, depth, alpha, beta, alphaMove, betaMove, maximizingPlayer)
+function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMove, maximizingPlayer )
 
     log( DEBUG, 'Depth: ' .. depth )
 
     local moves = {}
-    local my_moves = algorithm.neighbours( state['me']['coords'][1], grid )
-    local enemy_moves = algorithm.neighbours( state['enemy']['coords'][1], grid )
+    local my_moves = algorithm.neighbours( state[ 'me' ][ 'body' ][ 'data' ][1], grid )
+    local enemy_moves = algorithm.neighbours( state[ 'enemy' ][ 'body' ][ 'data' ][1], grid )
     
     -- if i'm smaller than the enemy, never move to a square that the enemy can also move to
-    if state['me'] ~= state['enemy'] then
-        if #state['me']['coords'] <= #state['enemy']['coords'] then
-            my_moves = n_complement(my_moves, enemy_moves)
+    if state[ 'me' ] ~= state[ 'enemy' ] then
+        if #state[ 'me' ][ 'body' ][ 'data' ] <= #state[ 'enemy' ][ 'body' ][ 'data' ] then
+            my_moves = n_complement( my_moves, enemy_moves )
         end
     end
     
     if maximizingPlayer then
         moves = my_moves
-        log( DEBUG, string.format( 'My Turn. Possible moves: %s', inspect(moves) ) )
+        log( DEBUG, string.format( 'My Turn. Possible moves: %s', inspect( moves ) ) )
     else
         moves = enemy_moves
-        log( DEBUG, string.format( 'Enemy Turn. Possible moves: %s', inspect(moves) ) )
+        log( DEBUG, string.format( 'Enemy Turn. Possible moves: %s', inspect( moves ) ) )
     end
     
     if
@@ -249,8 +249,8 @@ function algorithm.alphabeta(grid, state, depth, alpha, beta, alphaMove, betaMov
         
         -- short circuit win/loss conditions
         #moves == 0 or
-        state['me']['health'] <= 0 or
-        state['enemy']['health'] <= 0 
+        state[ 'me' ][ 'health' ] <= 0 or
+        state[ 'enemy' ][ 'health' ] <= 0 
     then
         return heuristic( grid, state, my_moves, enemy_moves )
     end
@@ -259,25 +259,25 @@ function algorithm.alphabeta(grid, state, depth, alpha, beta, alphaMove, betaMov
         for i = 1, #moves do
                         
             -- Update grid and coords for this move
-            log( DEBUG, string.format( 'My move: %s', inspect(moves[i]) ) )
+            log( DEBUG, string.format( 'My move: %s', inspect( moves[i] ) ) )
             local new_grid = deepcopy( grid )
             local new_state = deepcopy( state )
-            table.insert( new_state['me']['coords'], 1, moves[i] )
-            local length = #new_state['me']['coords']
-            if new_grid[new_state['me']['coords'][1][2]][new_state['me']['coords'][1][1]] ~= 'O' then
-                new_grid[new_state['me']['coords'][length][2]][new_state['me']['coords'][length][1]] = '.'
-                table.remove( new_state['me']['coords'] )
-                new_state['me']['health'] = new_state['me']['health'] - 1
+            table.insert( new_state[ 'me' ][ 'body' ][ 'data' ], 1, moves[i] )
+            local length = #new_state[ 'me' ][ 'body' ][ 'data' ]
+            if new_grid[ new_state[ 'me' ][ 'body' ][ 'data' ][1][ 'y' ] ][ new_state[ 'me' ][ 'body' ][ 'data' ][1][ 'x' ] ] ~= 'O' then
+                new_grid[ new_state[ 'me' ][ 'body' ][ 'data' ][ length ][ 'y' ] ][ new_state[ 'me' ][ 'body' ][ 'data' ][ length ][ 'x' ] ] = '.'
+                table.remove( new_state[ 'me' ][ 'body' ][ 'data' ] )
+                new_state[ 'me' ][ 'health' ] = new_state[ 'me' ][ 'health' ] - 1
             else
-                new_state['me']['health'] = 100
+                new_state[ 'me' ][ 'health' ] = 100
             end
-            new_grid[new_state['me']['coords'][1][2]][new_state['me']['coords'][1][1]] = '@'
-            if #new_state['me']['coords'] > 1 then
-                new_grid[new_state['me']['coords'][2][2]][new_state['me']['coords'][2][1]] = '#'
+            new_grid[ new_state[ 'me' ][ 'body' ][ 'data' ][1][ 'y' ] ][ new_state[ 'me' ][ 'body' ][ 'data' ][1][ 'x' ] ] = '@'
+            if #new_state[ 'me' ][ 'body' ][ 'data' ] > 1 then
+                new_grid[ new_state[ 'me' ][ 'body' ][ 'data' ][2][ 'y' ] ][ new_state[ 'me' ][ 'body' ][ 'data' ][2][ 'x' ] ] = '#'
             end
             
             
-            local newAlpha = algorithm.alphabeta(new_grid, new_state, depth + 1, alpha, beta, alphaMove, betaMove, false)
+            local newAlpha = algorithm.alphabeta( new_grid, new_state, depth + 1, alpha, beta, alphaMove, betaMove, false )
             if newAlpha > alpha then
                 alpha = newAlpha
                 alphaMove = moves[i]
@@ -289,25 +289,25 @@ function algorithm.alphabeta(grid, state, depth, alpha, beta, alphaMove, betaMov
         for i = 1, #moves do
             
             -- Update grid and coords for this move
-            log( DEBUG, string.format( 'Enemy move: %s', inspect(moves[i]) ) )
+            log( DEBUG, string.format( 'Enemy move: %s', inspect( moves[i] ) ) )
             local new_grid = deepcopy( grid )
             local new_state = deepcopy( state )
-            table.insert( new_state['enemy']['coords'], 1, moves[i] )
-            local length = #new_state['enemy']['coords']
-            if new_grid[new_state['enemy']['coords'][1][2]][new_state['enemy']['coords'][1][1]] ~= 'O' then
-                new_grid[new_state['enemy']['coords'][length][2]][new_state['enemy']['coords'][length][1]] = '.'
-                table.remove( new_state['enemy']['coords'] )
-                new_state['enemy']['health'] = new_state['enemy']['health'] - 1
+            table.insert( new_state[ 'enemy' ][ 'body' ][ 'data' ], 1, moves[i] )
+            local length = #new_state[ 'enemy' ][ 'body' ][ 'data' ]
+            if new_grid[ new_state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'y' ] ][ new_state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'x' ] ] ~= 'O' then
+                new_grid[ new_state[ 'enemy' ][ 'body' ][ 'data' ][ length ][ 'y' ] ][ new_state[ 'enemy' ][ 'body' ][ 'data' ][ length ][ 'x' ] ] = '.'
+                table.remove( new_state[ 'enemy' ][ 'body' ][ 'data' ] )
+                new_state[ 'enemy' ][ 'health' ] = new_state[ 'enemy' ][ 'health' ] - 1
             else
-                new_state['enemy']['health'] = 100
+                new_state[ 'enemy' ][ 'health' ] = 100
             end
-            new_grid[new_state['enemy']['coords'][1][2]][new_state['enemy']['coords'][1][1]] = '@'
-            if #new_state['enemy']['coords'] > 1 then
-                new_grid[new_state['enemy']['coords'][2][2]][new_state['enemy']['coords'][2][1]] = '#'
+            new_grid[ new_state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'y' ] ][ new_state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'x' ] ] = '@'
+            if #new_state[ 'enemy' ][ 'body' ][ 'data' ] > 1 then
+                new_grid[ new_state[ 'enemy' ][ 'body' ][ 'data' ][2][ 'y' ] ][ new_state[ 'enemy' ][ 'body' ][ 'data' ][2][ 'x' ] ] = '#'
             end
             
             
-            local newBeta = algorithm.alphabeta(new_grid, new_state, depth + 1, alpha, beta, alphaMove, betaMove, true)
+            local newBeta = algorithm.alphabeta( new_grid, new_state, depth + 1, alpha, beta, alphaMove, betaMove, true )
             if newBeta < beta then
                 beta = newBeta
                 betaMove = moves[i]

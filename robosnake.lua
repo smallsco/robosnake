@@ -34,12 +34,27 @@ local update_time = ngx.update_time
 -- Seed Lua's PRNG
 math.randomseed( os.time() )
 
+-- Get the POST request and decode the JSON
 local request_body = ngx.var.request_body
 log( DEBUG, 'Got request data: ' .. request_body )
 local gameState = cjson.decode( request_body )
 
+-- Convert to 1-based indexing
 log( DEBUG, 'Converting Coordinates' )
-gameState = util.convert_gamestate( gameState )
+for i = 1, #gameState[ 'food' ][ 'data' ] do
+    gameState[ 'food' ][ 'data' ][i][ 'x' ] = gameState[ 'food' ][ 'data' ][i][ 'x' ] + 1
+    gameState[ 'food' ][ 'data' ][i][ 'y' ] = gameState[ 'food' ][ 'data' ][i][ 'y' ] + 1
+end
+for i = 1, #gameState[ 'snakes' ][ 'data' ] do
+    for j = 1, #gameState[ 'snakes' ][ 'data' ][i][ 'body' ][ 'data' ] do
+        gameState[ 'snakes' ][ 'data' ][i][ 'body' ][ 'data' ][j][ 'x' ] = gameState[ 'snakes' ][ 'data' ][i][ 'body' ][ 'data' ][j][ 'x' ] + 1
+        gameState[ 'snakes' ][ 'data' ][i][ 'body' ][ 'data' ][j][ 'y' ] = gameState[ 'snakes' ][ 'data' ][i][ 'body' ][ 'data' ][j][ 'y' ] + 1
+    end
+end
+for i = 1, #gameState[ 'you' ][ 'body' ][ 'data' ] do
+    gameState[ 'you' ][ 'body' ][ 'data' ][i][ 'x' ] = gameState[ 'you' ][ 'body' ][ 'data' ][i][ 'x' ] + 1
+    gameState[ 'you' ][ 'body' ][ 'data' ][i][ 'y' ] = gameState[ 'you' ][ 'body' ][ 'data' ][i][ 'y' ] + 1
+end
 
 log( DEBUG, 'Building World Map' )
 local grid = util.buildWorldMap( gameState )
@@ -51,35 +66,23 @@ util.printWorldMap( grid )
 -- enemy. While you can put it into a game with multiple snakes, it
 -- will only look at the closest enemy when deciding the next move
 -- to make.
-if #gameState['snakes'] > 2 then
+if #gameState[ 'snakes' ][ 'data' ] > 2 then
     log( DEBUG, "WARNING: Multiple enemies detected. Choosing the closest snake for behavior prediction." )
 end
 
--- Who am I?
-local id = gameState['you']
-if not id then
-    log( DEBUG, "FATAL: Can't find my ID." )
-    ngx.exit( ngx.HTTP_INTERNAL_SERVER_ERROR )
-end
-
 -- Convenience vars
-local me, enemy
+local me = gameState[ 'you' ]
+local enemy = nil
 local distance = 99999
-for i = 1, #gameState['snakes'] do
-    if gameState['snakes'][i]['id'] == id then
-        me = gameState['snakes'][i]
-    end
-end
-if not me then
-    log( DEBUG, "FATAL: Can't find myself on the game board." )
-    ngx.exit( ngx.HTTP_INTERNAL_SERVER_ERROR )
-end
-for i = 1, #gameState['snakes'] do
-    if gameState['snakes'][i]['id'] ~= id then
-        local d = mdist( me['coords'][1], gameState['snakes'][i]['coords'][1] )
+for i = 1, #gameState[ 'snakes' ][ 'data' ] do
+    if gameState[ 'snakes' ][ 'data' ][i][ 'id' ] ~= me[ 'id' ] then
+        local d = mdist(
+            me[ 'body' ][ 'data' ][1],
+            gameState[ 'snakes' ][ 'data' ][i][ 'body' ][ 'data' ][1]
+        )
         if d < distance then
             distance = d
-            enemy = gameState['snakes'][i]
+            enemy = gameState[ 'snakes' ][ 'data' ][i]
         end
     end
 end
@@ -91,7 +94,7 @@ if not enemy then
     enemy = me
 end
 
-log( DEBUG, 'Enemy Snake: ' .. enemy['name'] )
+log( DEBUG, 'Enemy Snake: ' .. enemy[ 'name' ] )
 local myState = {
     me = me,
     enemy = enemy
@@ -99,39 +102,40 @@ local myState = {
 
 -- Alpha-Beta Pruning algorithm
 -- This is significantly faster than minimax on a single processor, but very challenging to parallelize
-local bestScore, bestMove = algorithm.alphabeta(grid, myState, 0, -math.huge, math.huge, nil, nil, true)
-log( DEBUG, string.format('Best score: %s', bestScore) )
-log( DEBUG, string.format('Best move: %s', inspect(bestMove)) )
+local bestScore, bestMove = algorithm.alphabeta( grid, myState, 0, -math.huge, math.huge, nil, nil, true )
+log( DEBUG, string.format( 'Best score: %s', bestScore ) )
+log( DEBUG, string.format( 'Best move: %s', inspect( bestMove ) ) )
 
 -- FAILSAFE #1
 -- Prediction thinks we're going to die soon, however, predictions can be wrong.
 -- Pick a random safe neighbour and move there.
 if not bestMove then
     log( DEBUG, "WARNING: Trying to cheat death." )
-    local my_moves = neighbours( myState['me']['coords'][1], grid )
-    local enemy_moves = neighbours( myState['enemy']['coords'][1], grid )
-    local safe_moves = util.n_complement(my_moves, enemy_moves)
+    local my_moves = neighbours( myState[ 'me' ][ 'body' ][ 'data' ][1], grid )
+    local enemy_moves = neighbours( myState[ 'enemy' ][ 'body' ][ 'data' ][1], grid )
+    local safe_moves = util.n_complement( my_moves, enemy_moves )
     
-    if #myState['me']['coords'] <= #myState['enemy']['coords'] and #safe_moves > 0 then
+    if #myState[ 'me' ][ 'body' ][ 'data' ] <= #myState[ 'enemy' ][ 'body' ][ 'data' ] and #safe_moves > 0 then
         my_moves = safe_moves
     end
     
     if #my_moves > 0 then
-        bestMove = my_moves[math.random(#my_moves)]
+        bestMove = my_moves[ math.random( #my_moves ) ]
     end
 end
 
 -- FAILSAFE #2
 -- should only be reached if there is literally nowhere we can move
 -- this really only exists to ensure we always return a valid http response
+-- always goes left
 if not bestMove then
     log( DEBUG, "WARNING: Using failsafe move. I'm probably trapped and about to die." )
-    bestMove = {me['coords'][1][1]-1,me['coords'][1][2]}
+    bestMove = { x = me[ 'body' ][ 'data' ][1][ 'x' ] - 1, y = me[ 'body' ][ 'data' ][1][ 'y' ] }
 end
 
 -- Move to the destination we decided on
-local dir = util.direction( me['coords'][1], bestMove )
-log( DEBUG, string.format( 'Decision: Moving %s to [%s,%s]', dir, bestMove[1], bestMove[2] ) )
+local dir = util.direction( me[ 'body' ][ 'data' ][1], bestMove )
+log( DEBUG, string.format( 'Decision: Moving %s to [%s,%s]', dir, bestMove[ 'x' ], bestMove[ 'y' ] ) )
 
 
 -- Return response to the arena

@@ -28,14 +28,6 @@ local function _comp(a, b)
 end
 
 
---- Converts coordinates from 0-based indexing to 1-based indexing
--- @param table coords The source coordinate pair
--- @return table The converted coordinate pair
-local function convert_coordinates( coords )
-    return { coords[1]+1, coords[2]+1 }
-end
-
-
 
 --[[
     PUBLIC METHODS
@@ -65,30 +57,32 @@ function util.buildWorldMap( gameState )
     -- Generate the tile grid
     log( DEBUG, 'Generating tile grid' )
     local grid = {}
-    for y = 1, gameState['height'] do
+    for y = 1, gameState[ 'height' ] do
         grid[y] = {}
-        for x = 1, gameState['width'] do
+        for x = 1, gameState[ 'width' ] do
             grid[y][x] = '.'
         end
     end
     
     -- Place food
-    for i = 1, #gameState['food'] do
-        local food = gameState['food'][i]
-        grid[food[2]][food[1]] = 'O'
-        log( DEBUG, string.format('Placed food at [%s, %s]', food[1], food[2]) )
+    for i = 1, #gameState[ 'food' ][ 'data' ] do
+        local food = gameState[ 'food' ][ 'data' ][i]
+        grid[ food[ 'y' ] ][ food[ 'x' ] ] = 'O'
+        log( DEBUG, string.format( 'Placed food at [%s, %s]', food[ 'x' ], food[ 'y' ] ) )
     end
     
-    -- Place snakes
-    for i = 1, #gameState['snakes'] do
-        for j = 1, #gameState['snakes'][i]['coords'] do
-            local snake = gameState['snakes'][i]['coords'][j]
-            if j == 1 then
-                grid[snake[2]][snake[1]] = '@'
-                log( DEBUG, string.format('Placed snake head at [%s, %s]', snake[1], snake[2]) )
-            else
-                grid[snake[2]][snake[1]] = '#'
-                log( DEBUG, string.format('Placed snake tail at [%s, %s]', snake[1], snake[2]) )
+    -- Place living snakes
+    for i = 1, #gameState[ 'snakes' ][ 'data' ] do
+        if gameState[ 'snakes' ][ 'data' ][i][ 'health' ] > 0 then
+            for j = 1, #gameState[ 'snakes' ][ 'data' ][i][ 'body' ][ 'data' ] do
+                local snake = gameState[ 'snakes' ][ 'data' ][i][ 'body' ][ 'data' ][j]
+                if j == 1 then
+                    grid[ snake[ 'y' ] ][ snake[ 'x' ] ] = '@'
+                    log( DEBUG, string.format( 'Placed snake head at [%s, %s]', snake[ 'x' ], snake[ 'y' ] ) )
+                else
+                    grid[ snake[ 'y' ] ][ snake[ 'x' ] ] = '#'
+                    log( DEBUG, string.format( 'Placed snake tail at [%s, %s]', snake[ 'x' ], snake[ 'y' ] ) )
+                end
             end
         end
     end
@@ -97,55 +91,18 @@ function util.buildWorldMap( gameState )
 end
 
 
---- Converts an entire gamestate from 0-based indexing to 1-based indexing
--- @param table gameState The source game state
--- @return table The converted game state
-function util.convert_gamestate( gameState )
-    
-    local newState = {
-        you = gameState['you'],
-        game = gameState['game_id'],
-        turn = gameState['turn'],
-        height = gameState['height'],
-        width = gameState['width'],
-        snakes = {},
-        food = {}
-    }
-    
-    for i = 1, #gameState['food'] do
-        table.insert( newState['food'], convert_coordinates( gameState['food'][i] ) )
-    end
-    
-    for i = 1, #gameState['snakes'] do
-        local newSnake = {
-            id = gameState['snakes'][i]['id'],
-            name = gameState['snakes'][i]['name'],
-            taunt = gameState['snakes'][i]['taunt'],
-            health = gameState['snakes'][i]['health_points'],
-            coords = {}
-        }
-        for j = 1, #gameState['snakes'][i]['coords'] do
-            table.insert( newSnake['coords'], convert_coordinates( gameState['snakes'][i]['coords'][j] ) )
-        end
-        table.insert( newState['snakes'], newSnake )
-    end
-    
-    return newState
-end
-
-
 --- Calculates the direction, given a source and destination coordinate pair
 -- @param table src The source coordinate pair
 -- @param table dst The destination coordinate pair
 -- @return string The name of the direction
 function util.direction( src, dst )
-    if dst[1] == src[1]+1 and dst[2] == src[2] then
+    if dst[ 'x' ] == src[ 'x' ] + 1 and dst[ 'y' ] == src[ 'y' ] then
         return 'right'
-    elseif dst[1] == src[1]-1 and dst[2] == src[2] then
+    elseif dst[ 'x' ] == src[ 'x' ] - 1 and dst[ 'y' ] == src[ 'y' ] then
         return 'left'
-    elseif dst[1] == src[1] and dst[2] == src[2]+1 then
+    elseif dst[ 'x' ] == src[ 'x' ] and dst[ 'y' ] == src[ 'y' ] + 1 then
         return 'down'
-    elseif dst[1] == src[1] and dst[2] == src[2]-1 then
+    elseif dst[ 'x' ] == src[ 'x' ] and dst[ 'y' ] == src[ 'y' ] - 1 then
         return 'up'
     end
 end
@@ -156,26 +113,26 @@ end
 -- @param table dst The destination coordinate pair
 -- @return int The distance between the pairs
 function util.mdist( src, dst )
-    local dx = math.abs( src[1] - dst[1] )
-    local dy = math.abs( src[2] - dst[2] )
+    local dx = math.abs( src[ 'x' ] - dst[ 'x' ] )
+    local dy = math.abs( src[ 'y' ] - dst[ 'y' ] )
     return ( dx + dy )
 end
 
 
 -- @see https://github.com/vadi2/mudlet-lua/blob/2630cbeefc3faef3079556cb06459d1f53b8f842/lua/TableUtils.lua#L332
-function util.n_complement(set1, set2)
+function util.n_complement( set1, set2 )
     if not set1 and set2 then return false end
 
     local complement = {}
 
-    for _, val1 in pairs(set1) do
+    for _, val1 in pairs( set1 ) do
         local insert = true
-        for _, val2 in pairs(set2) do
-            if _comp(val1, val2) then
+        for _, val2 in pairs( set2 ) do
+            if _comp( val1, val2 ) then
                     insert = false
             end
         end
-        if insert then table.insert(complement, val1) end
+        if insert then table.insert( complement, val1 ) end
     end
 
     return complement
