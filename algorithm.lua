@@ -39,7 +39,7 @@ end
 -- @param v The value of a particular tile on the grid
 -- @return boolean
 local function isSafeSquare(v)
-    return v == '.' or v == 'O' 
+    return v == '.' or v == 'O' or v == '*'
 end
 
 
@@ -167,7 +167,6 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     end
     
     log( DEBUG, 'Score: ' .. score )
-    printWorldMap( grid )
 
     return score
 end
@@ -238,10 +237,10 @@ function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMo
     
     if maximizingPlayer then
         moves = my_moves
-        log( DEBUG, string.format( 'My Turn. Possible moves: %s', inspect( moves ) ) )
+        log( DEBUG, string.format( 'My Turn. Position: %s Possible moves: %s', inspect( state[ 'me' ][ 'body' ][ 'data' ] ), inspect( moves ) ) )
     else
         moves = enemy_moves
-        log( DEBUG, string.format( 'Enemy Turn. Possible moves: %s', inspect( moves ) ) )
+        log( DEBUG, string.format( 'Enemy Turn. Position: %s Possible moves: %s', inspect( state[ 'enemy' ][ 'body' ][ 'data' ] ), inspect( moves ) ) )
     end
     
     if
@@ -262,20 +261,69 @@ function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMo
             log( DEBUG, string.format( 'My move: %s', inspect( moves[i] ) ) )
             local new_grid = deepcopy( grid )
             local new_state = deepcopy( state )
-            table.insert( new_state[ 'me' ][ 'body' ][ 'data' ], 1, moves[i] )
-            local length = #new_state[ 'me' ][ 'body' ][ 'data' ]
-            if new_grid[ new_state[ 'me' ][ 'body' ][ 'data' ][1][ 'y' ] ][ new_state[ 'me' ][ 'body' ][ 'data' ][1][ 'x' ] ] ~= 'O' then
-                new_grid[ new_state[ 'me' ][ 'body' ][ 'data' ][ length ][ 'y' ] ][ new_state[ 'me' ][ 'body' ][ 'data' ][ length ][ 'x' ] ] = '.'
-                table.remove( new_state[ 'me' ][ 'body' ][ 'data' ] )
-                new_state[ 'me' ][ 'health' ] = new_state[ 'me' ][ 'health' ] - 1
-            else
+            local eating = false
+            
+            -- if next tile is food we are eating/healing, otherwise lose 1 health
+            if new_grid[ moves[i][ 'y' ] ][ moves[i][ 'x' ] ] == 'O' then
+                eating = true
                 new_state[ 'me' ][ 'health' ] = 100
-            end
-            new_grid[ new_state[ 'me' ][ 'body' ][ 'data' ][1][ 'y' ] ][ new_state[ 'me' ][ 'body' ][ 'data' ][1][ 'x' ] ] = '@'
-            if #new_state[ 'me' ][ 'body' ][ 'data' ] > 1 then
-                new_grid[ new_state[ 'me' ][ 'body' ][ 'data' ][2][ 'y' ] ][ new_state[ 'me' ][ 'body' ][ 'data' ][2][ 'x' ] ] = '#'
+            else
+                new_state[ 'me' ][ 'health' ] = new_state[ 'me' ][ 'health' ] - 1
             end
             
+            -- remove tail from map ONLY if not growing
+            local length = #new_state[ 'me' ][ 'body' ][ 'data' ]
+            if
+              length > 1
+              and
+              (
+                new_state[ 'me' ][ 'body' ][ 'data' ][ length ][ 'x' ] == new_state[ 'me' ][ 'body' ][ 'data' ][ length - 1 ][ 'x' ]
+                and new_state[ 'me' ][ 'body' ][ 'data' ][ length ][ 'y' ] == new_state[ 'me' ][ 'body' ][ 'data' ][ length - 1 ][ 'y' ]
+              )
+            then
+                -- do nothing
+            else
+                new_grid[ new_state[ 'me' ][ 'body' ][ 'data' ][ length ][ 'y' ] ][ new_state[ 'me' ][ 'body' ][ 'data' ][ length ][ 'x' ] ] = '.'
+            end
+            
+            -- always remove tail from state
+            table.remove( new_state[ 'me' ][ 'body' ][ 'data' ] )
+            
+            -- move head in state and on grid
+            if length > 1 then
+                new_grid[ new_state[ 'me' ][ 'body' ][ 'data' ][1][ 'y' ] ][ new_state[ 'me' ][ 'body' ][ 'data' ][1][ 'x' ] ] = '#'
+            end
+            table.insert( new_state[ 'me' ][ 'body' ][ 'data' ], 1, moves[i] )
+            new_grid[ moves[i][ 'y' ] ][ moves[i][ 'x' ] ] = '@'
+            
+            -- if eating add to the snake's body
+            if eating then
+                table.insert(
+                    new_state[ 'me' ][ 'body' ][ 'data' ],
+                    {
+                        x = new_state[ 'me' ][ 'body' ][ 'data' ][ length ][ 'x' ],
+                        y = new_state[ 'me' ][ 'body' ][ 'data' ][ length ][ 'y' ]
+                    }
+                )
+                eating = false
+            end
+            
+            -- mark if the tail is a safe square or not
+            local length = #new_state[ 'me' ][ 'body' ][ 'data' ]
+            if
+              length > 1
+              and
+              (
+                new_state[ 'me' ][ 'body' ][ 'data' ][ length ][ 'x' ] == new_state[ 'me' ][ 'body' ][ 'data' ][ length - 1 ][ 'x' ]
+                and new_state[ 'me' ][ 'body' ][ 'data' ][ length ][ 'y' ] == new_state[ 'me' ][ 'body' ][ 'data' ][ length - 1 ][ 'y' ]
+              )
+            then
+                new_grid[ new_state[ 'me' ][ 'body' ][ 'data' ][ length ][ 'y' ] ][ new_state[ 'me' ][ 'body' ][ 'data' ][ length ][ 'x' ] ] = '#'
+            else
+                new_grid[ new_state[ 'me' ][ 'body' ][ 'data' ][ length ][ 'y' ] ][ new_state[ 'me' ][ 'body' ][ 'data' ][ length ][ 'x' ] ] = '*'
+            end
+            
+            printWorldMap( new_grid )
             
             local newAlpha = algorithm.alphabeta( new_grid, new_state, depth + 1, alpha, beta, alphaMove, betaMove, false )
             if newAlpha > alpha then
@@ -292,20 +340,69 @@ function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMo
             log( DEBUG, string.format( 'Enemy move: %s', inspect( moves[i] ) ) )
             local new_grid = deepcopy( grid )
             local new_state = deepcopy( state )
-            table.insert( new_state[ 'enemy' ][ 'body' ][ 'data' ], 1, moves[i] )
-            local length = #new_state[ 'enemy' ][ 'body' ][ 'data' ]
-            if new_grid[ new_state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'y' ] ][ new_state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'x' ] ] ~= 'O' then
-                new_grid[ new_state[ 'enemy' ][ 'body' ][ 'data' ][ length ][ 'y' ] ][ new_state[ 'enemy' ][ 'body' ][ 'data' ][ length ][ 'x' ] ] = '.'
-                table.remove( new_state[ 'enemy' ][ 'body' ][ 'data' ] )
-                new_state[ 'enemy' ][ 'health' ] = new_state[ 'enemy' ][ 'health' ] - 1
-            else
+            local eating = false
+            
+            -- if next tile is food we are eating/healing, otherwise lose 1 health
+            if new_grid[ moves[i][ 'y' ] ][ moves[i][ 'x' ] ] == 'O' then
+                eating = true
                 new_state[ 'enemy' ][ 'health' ] = 100
-            end
-            new_grid[ new_state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'y' ] ][ new_state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'x' ] ] = '@'
-            if #new_state[ 'enemy' ][ 'body' ][ 'data' ] > 1 then
-                new_grid[ new_state[ 'enemy' ][ 'body' ][ 'data' ][2][ 'y' ] ][ new_state[ 'enemy' ][ 'body' ][ 'data' ][2][ 'x' ] ] = '#'
+            else
+                new_state[ 'enemy' ][ 'health' ] = new_state[ 'enemy' ][ 'health' ] - 1
             end
             
+            -- remove tail from map ONLY if not growing
+            local length = #new_state[ 'enemy' ][ 'body' ][ 'data' ]
+            if
+              length > 1
+              and
+              (
+                new_state[ 'enemy' ][ 'body' ][ 'data' ][ length ][ 'x' ] == new_state[ 'enemy' ][ 'body' ][ 'data' ][ length - 1 ][ 'x' ]
+                and new_state[ 'enemy' ][ 'body' ][ 'data' ][ length ][ 'y' ] == new_state[ 'enemy' ][ 'body' ][ 'data' ][ length - 1 ][ 'y' ]
+              )
+            then
+                -- do nothing
+            else
+                new_grid[ new_state[ 'enemy' ][ 'body' ][ 'data' ][ length ][ 'y' ] ][ new_state[ 'enemy' ][ 'body' ][ 'data' ][ length ][ 'x' ] ] = '.'
+            end
+            
+            -- always remove tail from state
+            table.remove( new_state[ 'enemy' ][ 'body' ][ 'data' ] )
+            
+            -- move head in state and on grid
+            if length > 1 then
+                new_grid[ new_state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'y' ] ][ new_state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'x' ] ] = '#'
+            end
+            table.insert( new_state[ 'enemy' ][ 'body' ][ 'data' ], 1, moves[i] )
+            new_grid[ moves[i][ 'y' ] ][ moves[i][ 'x' ] ] = '@'
+            
+            -- if eating add to the snake's body
+            if eating then
+                table.insert(
+                    new_state[ 'enemy' ][ 'body' ][ 'data' ],
+                    {
+                        x = new_state[ 'enemy' ][ 'body' ][ 'data' ][ length ][ 'x' ],
+                        y = new_state[ 'enemy' ][ 'body' ][ 'data' ][ length ][ 'y' ]
+                    }
+                )
+                eating = false
+            end
+            
+            -- mark if the tail is a safe square or not
+            local length = #new_state[ 'enemy' ][ 'body' ][ 'data' ]
+            if
+              length > 1
+              and
+              (
+                new_state[ 'enemy' ][ 'body' ][ 'data' ][ length ][ 'x' ] == new_state[ 'enemy' ][ 'body' ][ 'data' ][ length - 1 ][ 'x' ]
+                and new_state[ 'enemy' ][ 'body' ][ 'data' ][ length ][ 'y' ] == new_state[ 'enemy' ][ 'body' ][ 'data' ][ length - 1 ][ 'y' ]
+              )
+            then
+                new_grid[ new_state[ 'enemy' ][ 'body' ][ 'data' ][ length ][ 'y' ] ][ new_state[ 'enemy' ][ 'body' ][ 'data' ][ length ][ 'x' ] ] = '#'
+            else
+                new_grid[ new_state[ 'enemy' ][ 'body' ][ 'data' ][ length ][ 'y' ] ][ new_state[ 'enemy' ][ 'body' ][ 'data' ][ length ][ 'x' ] ] = '*'
+            end
+            
+            printWorldMap( new_grid )
             
             local newBeta = algorithm.alphabeta( new_grid, new_state, depth + 1, alpha, beta, alphaMove, betaMove, true )
             if newBeta < beta then
