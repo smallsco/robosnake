@@ -77,6 +77,26 @@ end
 -- @param enemy_moves Table containing enemy's possible moves
 local function heuristic( grid, state, my_moves, enemy_moves )
 
+    -- Handle head-on-head collisions.
+    if
+        state[ 'me' ][ 'body' ][ 'data' ][1][ 'x' ] == state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'x' ]
+        and state[ 'me' ][ 'body' ][ 'data' ][1][ 'y' ] == state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'y' ]
+    then
+        log( DEBUG, 'Head-on-head collision!' )
+        if #state[ 'me' ][ 'body' ][ 'data' ] > #state[ 'enemy' ][ 'body' ][ 'data' ] then
+            log( DEBUG, 'I am bigger and win!' )
+            return 2147483647
+        elseif #state[ 'me' ][ 'body' ][ 'data' ] < #state[ 'enemy' ][ 'body' ][ 'data' ] then
+            log( DEBUG, 'I am smaller and lose.' )
+            return -2147483648
+        else
+            -- do not use negative infinity here.
+            -- draws are better than losing because the bounty cannot be claimed without a clear victor.
+            log( DEBUG, "It's a draw." )
+            return -2147483647  -- one less than max int size
+        end
+    end
+
     -- My win/loss conditions
     if #my_moves == 0 then
         log( DEBUG, 'I am trapped.' )
@@ -236,13 +256,6 @@ function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMo
     local my_moves = algorithm.neighbours( state[ 'me' ][ 'body' ][ 'data' ][1], grid )
     local enemy_moves = algorithm.neighbours( state[ 'enemy' ][ 'body' ][ 'data' ][1], grid )
     
-    -- if i'm smaller than the enemy, never move to a square that the enemy can also move to
-    if state[ 'me' ] ~= state[ 'enemy' ] then
-        if #state[ 'me' ][ 'body' ][ 'data' ] <= #state[ 'enemy' ][ 'body' ][ 'data' ] then
-            my_moves = n_complement( my_moves, enemy_moves )
-        end
-    end
-    
     if maximizingPlayer then
         moves = my_moves
         log( DEBUG, string.format( 'My Turn. Position: %s Possible moves: %s', inspect( state[ 'me' ][ 'body' ][ 'data' ] ), inspect( moves ) ) )
@@ -257,7 +270,11 @@ function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMo
         -- short circuit win/loss conditions
         #moves == 0 or
         state[ 'me' ][ 'health' ] <= 0 or
-        state[ 'enemy' ][ 'health' ] <= 0 
+        state[ 'enemy' ][ 'health' ] <= 0 or
+        (
+            state[ 'me' ][ 'body' ][ 'data' ][1][ 'x' ] == state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'x' ]
+            and state[ 'me' ][ 'body' ][ 'data' ][1][ 'y' ] == state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'y' ]
+        )
     then
         return heuristic( grid, state, my_moves, enemy_moves )
     end
