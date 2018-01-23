@@ -102,7 +102,7 @@ local myState = {
 
 -- Alpha-Beta Pruning algorithm
 -- This is significantly faster than minimax on a single processor, but very challenging to parallelize
-local bestScore, bestMove = algorithm.alphabeta( grid, myState, 0, -math.huge, math.huge, nil, nil, true )
+local bestScore, bestMove = algorithm.alphabeta( grid, myState, 0, -math.huge, math.huge, nil, nil, true, {}, {} )
 log( DEBUG, string.format( 'Best score: %s', bestScore ) )
 log( DEBUG, string.format( 'Best move: %s', inspect( bestMove ) ) )
 
