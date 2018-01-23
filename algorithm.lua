@@ -38,8 +38,16 @@ end
 --- Returns true if a square is safe to pass over, false otherwise
 -- @param v The value of a particular tile on the grid
 -- @return boolean
-local function isSafeSquare(v)
+local function isSafeSquare( v )
     return v == '.' or v == 'O' or v == '*'
+end
+
+
+--- Returns true if a square is safe to pass over, false otherwise
+-- @param v The value of a particular tile on the grid
+-- @return boolean
+local function isSafeSquareFloodfill( v )
+    return v == '.' or v == 'O'
 end
 
 
@@ -50,12 +58,12 @@ local function floodfill( pos, grid, numSafe )
 
     local y = pos[ 'y' ]
     local x = pos[ 'x' ]
-    if isSafeSquare(grid[y][x]) then
+    if isSafeSquareFloodfill( grid[y][x] ) then
         grid[y][x] = 1
         numSafe = numSafe + 1
-        local n = algorithm.neighbours(pos, grid)
+        local n = algorithm.neighbours( pos, grid )
         for i = 1, #n do
-            numSafe = floodfill(n[i], grid, numSafe)
+            numSafe = floodfill( n[i], grid, numSafe )
         end
     end
     return numSafe
