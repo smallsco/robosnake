@@ -248,20 +248,23 @@ end
 -- @param alphaMove The best move at the current depth
 -- @param betaMove The worst move at the current depth
 -- @param maximizingPlayer True if calculating alpha at this depth, false if calculating beta
-function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMove, maximizingPlayer )
+function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMove, maximizingPlayer, prev_grid, prev_enemy_moves )
 
     log( DEBUG, 'Depth: ' .. depth )
 
     local moves = {}
     local my_moves = algorithm.neighbours( state[ 'me' ][ 'body' ][ 'data' ][1], grid )
-    local enemy_moves = algorithm.neighbours( state[ 'enemy' ][ 'body' ][ 'data' ][1], grid )
+    local enemy_moves = {}
+    if maximizingPlayer then
+        enemy_moves = algorithm.neighbours( state[ 'enemy' ][ 'body' ][ 'data' ][1], grid )
+    else
+        enemy_moves = prev_enemy_moves
+    end
     
     if maximizingPlayer then
         moves = my_moves
-        log( DEBUG, string.format( 'My Turn. Position: %s Possible moves: %s', inspect( state[ 'me' ][ 'body' ][ 'data' ] ), inspect( moves ) ) )
     else
         moves = enemy_moves
-        log( DEBUG, string.format( 'Enemy Turn. Position: %s Possible moves: %s', inspect( state[ 'enemy' ][ 'body' ][ 'data' ] ), inspect( moves ) ) )
     end
     
     if
@@ -276,10 +279,12 @@ function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMo
             and state[ 'me' ][ 'body' ][ 'data' ][1][ 'y' ] == state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'y' ]
         )
     then
+        log( DEBUG, 'Reached MAX_RECURSION_DEPTH or endgame state.' )
         return heuristic( grid, state, my_moves, enemy_moves )
     end
   
     if maximizingPlayer then
+        log( DEBUG, string.format( 'My Turn. Position: %s Possible moves: %s', inspect( state[ 'me' ][ 'body' ][ 'data' ] ), inspect( moves ) ) )
         for i = 1, #moves do
                         
             -- Update grid and coords for this move
@@ -350,7 +355,7 @@ function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMo
             
             printWorldMap( new_grid )
             
-            local newAlpha = algorithm.alphabeta( new_grid, new_state, depth + 1, alpha, beta, alphaMove, betaMove, false )
+            local newAlpha = algorithm.alphabeta( new_grid, new_state, depth + 1, alpha, beta, alphaMove, betaMove, false, new_grid, enemy_moves )
             if newAlpha > alpha then
                 alpha = newAlpha
                 alphaMove = moves[i]
@@ -359,6 +364,7 @@ function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMo
         end
         return alpha, alphaMove
     else
+        log( DEBUG, string.format( 'Enemy Turn. Position: %s Possible moves: %s', inspect( state[ 'enemy' ][ 'body' ][ 'data' ] ), inspect( moves ) ) )
         for i = 1, #moves do
             
             -- Update grid and coords for this move
@@ -368,7 +374,7 @@ function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMo
             local eating = false
             
             -- if next tile is food we are eating/healing, otherwise lose 1 health
-            if new_grid[ moves[i][ 'y' ] ][ moves[i][ 'x' ] ] == 'O' then
+            if prev_grid[ moves[i][ 'y' ] ][ moves[i][ 'x' ] ] == 'O' then
                 eating = true
                 new_state[ 'enemy' ][ 'health' ] = 100
             else
@@ -429,7 +435,7 @@ function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMo
             
             printWorldMap( new_grid )
             
-            local newBeta = algorithm.alphabeta( new_grid, new_state, depth + 1, alpha, beta, alphaMove, betaMove, true )
+            local newBeta = algorithm.alphabeta( new_grid, new_state, depth + 1, alpha, beta, alphaMove, betaMove, true, {}, {} )
             if newBeta < beta then
                 beta = newBeta
                 betaMove = moves[i]
