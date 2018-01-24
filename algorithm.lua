@@ -180,10 +180,19 @@ local function heuristic( grid, state, my_moves, enemy_moves )
         log( DEBUG, string.format('Food %s, distance %s, score %s', inspect(food[i]), dist, (dist*foodWeight) ) )
     end
 
+    -- Hang out near the enemy's head
+    local kill_squares = algorithm.neighbours( state[ 'enemy' ][ 'body' ][ 'data' ][1], grid )
+    for i = 1, #kill_squares do
+        local dist = mdist( state[ 'me' ][ 'body' ][ 'data' ][1], kill_squares[i] )
+        score = score - (dist * 100)
+        log( DEBUG, string.format('Kill square distance %s, score %s', dist, dist*100 ) )
+    end
+     
     -- Hang out near the center
-    local dist = mdist( state[ 'me' ][ 'body' ][ 'data' ][1], { x = center_x, y = center_y } )
+    -- Temporarily Disabled
+    --[[local dist = mdist( state[ 'me' ][ 'body' ][ 'data' ][1], { x = center_x, y = center_y } )
     score = score - (dist * 100)
-    log( DEBUG, string.format('Center distance %s, score %s', dist, dist*100 ) )
+    log( DEBUG, string.format('Center distance %s, score %s', dist, dist*100 ) )]]
    
  
     log( DEBUG, 'Original score: ' .. score )
