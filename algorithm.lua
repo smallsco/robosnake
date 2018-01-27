@@ -3,6 +3,7 @@ local algorithm = {}
 
 -- Lua optimization: any functions from another module called more than once
 -- are faster if you create a local reference to that function.
+local compare = util.compare
 local DEBUG = ngx.DEBUG
 local log = ngx.log
 local mdist = util.mdist
@@ -171,13 +172,19 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     
     -- If there's food on the board, and I'm hungry, go for it
     -- If I'm not hungry, ignore it
-    local foodWeight = 100 - state[ 'me' ][ 'health' ]
+    local foodWeight = 0
+    if state[ 'me' ][ 'health' ] <= HUNGER_HEALTH then
+        foodWeight = 100 - state[ 'me' ][ 'health' ]
+    end
     log( DEBUG, 'Food Weight: ' .. foodWeight )
-    for i = 1, #food do
-        local dist = mdist( state[ 'me' ][ 'body' ][ 'data' ][1], food[i] )
-        --local dist = mdist( { x = center_x, y = center_y }, food[i] )
-        score = score - ( dist * foodWeight )
-        log( DEBUG, string.format('Food %s, distance %s, score %s', inspect(food[i]), dist, (dist*foodWeight) ) )
+    if foodWeight > 0 then
+        for i = 1, #food do
+            local dist = mdist( state[ 'me' ][ 'body' ][ 'data' ][1], food[i] )
+            -- "i" is used in the score so that two pieces of food that 
+            -- are equal distance from me do not have identical weighting
+            score = score - ( dist * foodWeight ) - i
+            log( DEBUG, string.format('Food %s, distance %s, score %s', inspect( food[i] ), dist, ( dist * foodWeight ) - i ) )
+        end
     end
 
     -- Hang out near the enemy's head
