@@ -3,7 +3,6 @@ local algorithm = {}
 
 -- Lua optimization: any functions from another module called more than once
 -- are faster if you create a local reference to that function.
-local compare = util.compare
 local DEBUG = ngx.DEBUG
 local log = ngx.log
 local mdist = util.mdist

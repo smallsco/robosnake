@@ -98,15 +98,6 @@ function util.buildWorldMap( gameState )
 end
 
 
---- Compares two tables (to be used in table.sort)
--- @param table a The first table
--- @param table b The second table
--- @return boolean True if the first table's first element is smaller than the second table's
-function util.compare( a, b )
-    return a[1] < b[1]
-end
-
-
 --- Calculates the direction, given a source and destination coordinate pair
 -- @param table src The source coordinate pair
 -- @param table dst The destination coordinate pair
