@@ -171,19 +171,34 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     
     -- If there's food on the board, and I'm hungry, go for it
     -- If I'm not hungry, ignore it
-    local foodWeight = 100 - state[ 'me' ][ 'health' ]
+    local foodWeight = 0
+    if state[ 'me' ][ 'health' ] <= HUNGER_HEALTH then
+        foodWeight = 100 - state[ 'me' ][ 'health' ]
+    end
     log( DEBUG, 'Food Weight: ' .. foodWeight )
-    for i = 1, #food do
-        local dist = mdist( state[ 'me' ][ 'body' ][ 'data' ][1], food[i] )
-        --local dist = mdist( { x = center_x, y = center_y }, food[i] )
-        score = score - ( dist * foodWeight )
-        log( DEBUG, string.format('Food %s, distance %s, score %s', inspect(food[i]), dist, (dist*foodWeight) ) )
+    if foodWeight > 0 then
+        for i = 1, #food do
+            local dist = mdist( state[ 'me' ][ 'body' ][ 'data' ][1], food[i] )
+            -- "i" is used in the score so that two pieces of food that 
+            -- are equal distance from me do not have identical weighting
+            score = score - ( dist * foodWeight ) - i
+            log( DEBUG, string.format('Food %s, distance %s, score %s', inspect( food[i] ), dist, ( dist * foodWeight ) - i ) )
+        end
     end
 
+    -- Hang out near the enemy's head
+    local kill_squares = algorithm.neighbours( state[ 'enemy' ][ 'body' ][ 'data' ][1], grid )
+    for i = 1, #kill_squares do
+        local dist = mdist( state[ 'me' ][ 'body' ][ 'data' ][1], kill_squares[i] )
+        score = score - (dist * 100)
+        log( DEBUG, string.format('Kill square distance %s, score %s', dist, dist*100 ) )
+    end
+     
     -- Hang out near the center
-    local dist = mdist( state[ 'me' ][ 'body' ][ 'data' ][1], { x = center_x, y = center_y } )
+    -- Temporarily Disabled
+    --[[local dist = mdist( state[ 'me' ][ 'body' ][ 'data' ][1], { x = center_x, y = center_y } )
     score = score - (dist * 100)
-    log( DEBUG, string.format('Center distance %s, score %s', dist, dist*100 ) )
+    log( DEBUG, string.format('Center distance %s, score %s', dist, dist*100 ) )]]
    
  
     log( DEBUG, 'Original score: ' .. score )
