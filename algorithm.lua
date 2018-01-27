@@ -355,7 +355,7 @@ function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMo
             
             printWorldMap( new_grid )
             
-            local newAlpha = algorithm.alphabeta( new_grid, new_state, depth + 1, alpha, beta, alphaMove, betaMove, false, new_grid, enemy_moves )
+            local newAlpha = algorithm.alphabeta( new_grid, new_state, depth + 1, alpha, beta, alphaMove, betaMove, false, grid, enemy_moves )
             if newAlpha > alpha then
                 alpha = newAlpha
                 alphaMove = moves[i]
