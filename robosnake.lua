@@ -107,29 +107,47 @@ log( DEBUG, string.format( 'Best score: %s', bestScore ) )
 log( DEBUG, string.format( 'Best move: %s', inspect( bestMove ) ) )
 
 -- FAILSAFE #1
--- Prediction thinks we're going to die soon, however, predictions can be wrong.
--- Pick a random safe neighbour and move there.
+-- This is reached if no move is returned by the alphabeta pruning algorithm.
+-- This can happen if the recursion depth is 0 or if searching up to the recursion depth
+-- results in all unwinnable scenarios. However this doesn't mean we are doomed, we may
+-- have moved into a space that appears to trap us, but at some move beyond the
+-- max recursion depth we are able to break free (i.e. trapped by the enemy's tail which
+-- later gets out of the way)
 if not bestMove then
-    log( DEBUG, "WARNING: Trying to cheat death." )
+    log( DEBUG, "WARNING: No move returned from alphabeta!" )
     local my_moves = neighbours( myState[ 'me' ][ 'body' ][ 'data' ][1], grid )
     local enemy_moves = neighbours( myState[ 'enemy' ][ 'body' ][ 'data' ][1], grid )
     local safe_moves = util.n_complement( my_moves, enemy_moves )
     
     if #myState[ 'me' ][ 'body' ][ 'data' ] <= #myState[ 'enemy' ][ 'body' ][ 'data' ] and #safe_moves > 0 then
+        -- We're smaller than the enemy and there's one or more safe squares (a square that
+        -- we can reach and the enemy can not) available - prefer those squares.
+        log( DEBUG, "Moving to a random safe neighbour." )
         my_moves = safe_moves
+    else
+        -- We're _larger_ than the enemy, or we're smaller but there are no safe squares
+        -- available - we may end up in a head-on-head collision.
+        log( DEBUG, "Moving to a random free neighbour." )
     end
     
     if #my_moves > 0 then
+        -- Move to any square that _may_ give us a chance of living.
+        bestMove = my_moves[ math.random( #my_moves ) ]
+    else
+        -- If we reach this point, there isn't anywhere safe to move to and we're going to die.
+        -- This just prefers snake deaths over wall deaths, so that the official battlesnake
+        -- unit tests pass.
+        log( DEBUG, "FATAL: No free neighbours. I'm going to die. Trying to avoid a wall..." )
+        local my_moves = neighbours( myState[ 'me' ][ 'body' ][ 'data' ][1], grid, true )
         bestMove = my_moves[ math.random( #my_moves ) ]
     end
 end
 
 -- FAILSAFE #2
--- should only be reached if there is literally nowhere we can move
--- this really only exists to ensure we always return a valid http response
--- always goes left
+-- We're dead. This only exists to ensure that we always return a valid JSON response
+-- to the game board. It always goes left.
 if not bestMove then
-    log( DEBUG, "WARNING: Using failsafe move. I'm probably trapped and about to die." )
+    log( DEBUG, "FATAL: Wall collision unavoidable. I'm going to die. Moving left!" )
     bestMove = { x = me[ 'body' ][ 'data' ][1][ 'x' ] - 1, y = me[ 'body' ][ 'data' ][1][ 'y' ] }
 end
 
