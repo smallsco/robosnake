@@ -138,7 +138,7 @@ if not bestMove then
         -- This just prefers snake deaths over wall deaths, so that the official battlesnake
         -- unit tests pass.
         log( DEBUG, "FATAL: No free neighbours. I'm going to die. Trying to avoid a wall..." )
-        local my_moves = neighbours( myState[ 'me' ][ 'body' ][ 'data' ][1], grid, true )
+        my_moves = neighbours( myState[ 'me' ][ 'body' ][ 'data' ][1], grid, true )
         bestMove = my_moves[ math.random( #my_moves ) ]
     end
 end

@@ -37,6 +37,7 @@ end
 
 --- Returns true if a square is safe to pass over, false otherwise
 -- @param v The value of a particular tile on the grid
+-- @param boolean failsafe If true, don't consider if the neighbour is safe or not
 -- @return boolean
 local function isSafeSquare( v, failsafe )
     if failsafe then
@@ -225,6 +226,8 @@ end
 
 --- Returns the set of all coordinate pairs on the board that are adjacent to the given position
 -- @param table pos The source coordinate pair
+-- @param table grid The game grid
+-- @param boolean failsafe If true, don't consider if the neighbour is safe or not
 -- @return table The neighbours of the source coordinate pair
 function algorithm.neighbours( pos, grid, failsafe )
     local neighbours = {}
