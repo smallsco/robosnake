@@ -37,9 +37,14 @@ end
 
 --- Returns true if a square is safe to pass over, false otherwise
 -- @param v The value of a particular tile on the grid
+-- @param boolean failsafe If true, don't consider if the neighbour is safe or not
 -- @return boolean
-local function isSafeSquare( v )
-    return v == '.' or v == 'O' or v == '*'
+local function isSafeSquare( v, failsafe )
+    if failsafe then
+        return true
+    else
+        return v == '.' or v == 'O' or v == '*'
+    end
 end
 
 
@@ -221,8 +226,10 @@ end
 
 --- Returns the set of all coordinate pairs on the board that are adjacent to the given position
 -- @param table pos The source coordinate pair
+-- @param table grid The game grid
+-- @param boolean failsafe If true, don't consider if the neighbour is safe or not
 -- @return table The neighbours of the source coordinate pair
-function algorithm.neighbours( pos, grid )
+function algorithm.neighbours( pos, grid, failsafe )
     local neighbours = {}
     local north = { x = pos[ 'x' ], y = pos[ 'y' ] - 1 }
     local south = { x = pos[ 'x' ], y = pos[ 'y' ] + 1 }
@@ -232,16 +239,16 @@ function algorithm.neighbours( pos, grid )
     local height = #grid
     local width = #grid[1]
     
-    if north[ 'y' ] > 0 and north[ 'y' ] <= height and isSafeSquare( grid[ north[ 'y' ] ][ north[ 'x' ] ] ) then
+    if north[ 'y' ] > 0 and north[ 'y' ] <= height and isSafeSquare( grid[ north[ 'y' ] ][ north[ 'x' ] ], failsafe ) then
         table.insert( neighbours, north )
     end
-    if south[ 'y' ] > 0 and south[ 'y' ] <= height and isSafeSquare( grid[ south[ 'y' ] ][ south[ 'x' ] ] ) then
+    if south[ 'y' ] > 0 and south[ 'y' ] <= height and isSafeSquare( grid[ south[ 'y' ] ][ south[ 'x' ] ], failsafe ) then
         table.insert( neighbours, south )
     end
-    if east[ 'x' ] > 0 and east[ 'x' ] <= width and isSafeSquare( grid[ east[ 'y' ] ][ east[ 'x' ] ] ) then
+    if east[ 'x' ] > 0 and east[ 'x' ] <= width and isSafeSquare( grid[ east[ 'y' ] ][ east[ 'x' ] ], failsafe ) then
         table.insert( neighbours, east )
     end
-    if west[ 'x' ] > 0 and west[ 'x' ] <= width and isSafeSquare( grid[ west[ 'y' ] ][ west[ 'x' ] ] ) then
+    if west[ 'x' ] > 0 and west[ 'x' ] <= width and isSafeSquare( grid[ west[ 'y' ] ][ west[ 'x' ] ], failsafe ) then
         table.insert( neighbours, west )
     end
     
