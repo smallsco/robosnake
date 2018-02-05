@@ -76,13 +76,15 @@ local enemy = nil
 local distance = 99999
 for i = 1, #gameState[ 'snakes' ][ 'data' ] do
     if gameState[ 'snakes' ][ 'data' ][i][ 'id' ] ~= me[ 'id' ] then
-        local d = mdist(
-            me[ 'body' ][ 'data' ][1],
-            gameState[ 'snakes' ][ 'data' ][i][ 'body' ][ 'data' ][1]
-        )
-        if d < distance then
-            distance = d
-            enemy = gameState[ 'snakes' ][ 'data' ][i]
+        if gameState[ 'snakes' ][ 'data' ][i][ 'health' ] > 0 then
+            local d = mdist(
+                me[ 'body' ][ 'data' ][1],
+                gameState[ 'snakes' ][ 'data' ][i][ 'body' ][ 'data' ][1]
+            )
+            if d < distance then
+                distance = d
+                enemy = gameState[ 'snakes' ][ 'data' ][i]
+            end
         end
     end
 end
