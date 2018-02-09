@@ -107,7 +107,7 @@ local function heuristic( grid, state, my_moves, enemy_moves )
         log( DEBUG, 'I am trapped.' )
         return -2147483648
     end
-    if state[ 'me' ][ 'health' ] <= 0 then
+    if state[ 'me' ][ 'health' ] < 0 then
         log( DEBUG, 'I am out of health.' )
         return -2147483648
     end
@@ -137,7 +137,7 @@ local function heuristic( grid, state, my_moves, enemy_moves )
         log( DEBUG, 'Enemy is trapped.' )
         return 2147483647
     end
-    if state[ 'enemy' ][ 'health' ] <= 0 then
+    if state[ 'enemy' ][ 'health' ] < 0 then
         log( DEBUG, 'Enemy is out of health.' )
         return 2147483647
     end
@@ -294,8 +294,8 @@ function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMo
         
         -- short circuit win/loss conditions
         #moves == 0 or
-        state[ 'me' ][ 'health' ] <= 0 or
-        state[ 'enemy' ][ 'health' ] <= 0 or
+        state[ 'me' ][ 'health' ] < 0 or
+        state[ 'enemy' ][ 'health' ] < 0 or
         (
             state[ 'me' ][ 'body' ][ 'data' ][1][ 'x' ] == state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'x' ]
             and state[ 'me' ][ 'body' ][ 'data' ][1][ 'y' ] == state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'y' ]

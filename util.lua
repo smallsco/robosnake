@@ -73,23 +73,21 @@ function util.buildWorldMap( gameState )
     
     -- Place living snakes
     for i = 1, #gameState[ 'snakes' ][ 'data' ] do
-        if gameState[ 'snakes' ][ 'data' ][i][ 'health' ] > 0 then
-            local length = #gameState[ 'snakes' ][ 'data' ][i][ 'body' ][ 'data' ]
-            for j = 1, length do
-                local snake = gameState[ 'snakes' ][ 'data' ][i][ 'body' ][ 'data' ][j]
-                if j == 1 then
-                    grid[ snake[ 'y' ] ][ snake[ 'x' ] ] = '@'
-                    log( DEBUG, string.format( 'Placed snake head at [%s, %s]', snake[ 'x' ], snake[ 'y' ] ) )
-                elseif j == length then
-                    if grid[ snake[ 'y' ] ][ snake[ 'x' ] ] ~= '@' and grid[ snake[ 'y' ] ][ snake[ 'x' ] ] ~= '#' then
-                        grid[ snake[ 'y' ] ][ snake[ 'x' ] ] = '*'
-                    end
-                else
-                    if grid[ snake[ 'y' ] ][ snake[ 'x' ] ] ~= '@' then
-                        grid[ snake[ 'y' ] ][ snake[ 'x' ] ] = '#'
-                    end
-                    log( DEBUG, string.format( 'Placed snake tail at [%s, %s]', snake[ 'x' ], snake[ 'y' ] ) )
+        local length = #gameState[ 'snakes' ][ 'data' ][i][ 'body' ][ 'data' ]
+        for j = 1, length do
+            local snake = gameState[ 'snakes' ][ 'data' ][i][ 'body' ][ 'data' ][j]
+            if j == 1 then
+                grid[ snake[ 'y' ] ][ snake[ 'x' ] ] = '@'
+                log( DEBUG, string.format( 'Placed snake head at [%s, %s]', snake[ 'x' ], snake[ 'y' ] ) )
+            elseif j == length then
+                if grid[ snake[ 'y' ] ][ snake[ 'x' ] ] ~= '@' and grid[ snake[ 'y' ] ][ snake[ 'x' ] ] ~= '#' then
+                    grid[ snake[ 'y' ] ][ snake[ 'x' ] ] = '*'
                 end
+            else
+                if grid[ snake[ 'y' ] ][ snake[ 'x' ] ] ~= '@' then
+                    grid[ snake[ 'y' ] ][ snake[ 'x' ] ] = '#'
+                end
+                log( DEBUG, string.format( 'Placed snake tail at [%s, %s]', snake[ 'x' ], snake[ 'y' ] ) )
             end
         end
     end
