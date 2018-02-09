@@ -19,13 +19,19 @@
 
 -- Lua optimization: any functions from another module called more than once
 -- are faster if you create a local reference to that function.
+
+-- TODO : REMOVE
 local DEBUG = ngx.DEBUG
 local log = ngx.log
+-- TODO : REMOVE [END]
+
 local mdist = util.mdist
 local neighbours = algorithm.neighbours
 local now = ngx.now
 local update_time = ngx.update_time
 
+-- Lua socket logger
+local logger = require "logger"
 
 --[[
     MAIN APP LOGIC
@@ -36,11 +42,12 @@ math.randomseed( os.time() )
 
 -- Get the POST request and decode the JSON
 local request_body = ngx.var.request_body
-log( DEBUG, 'Got request data: ' .. request_body )
+-- log( DEBUG, 'Got request data: ' .. request_body )
+logger("debug", 'Got request data: ' .. request_body )
 local gameState = cjson.decode( request_body )
 
 -- Convert to 1-based indexing
-log( DEBUG, 'Converting Coordinates' )
+-- log( DEBUG, 'Converting Coordinates' )
 for i = 1, #gameState[ 'food' ][ 'data' ] do
     gameState[ 'food' ][ 'data' ][i][ 'x' ] = gameState[ 'food' ][ 'data' ][i][ 'x' ] + 1
     gameState[ 'food' ][ 'data' ][i][ 'y' ] = gameState[ 'food' ][ 'data' ][i][ 'y' ] + 1
@@ -56,7 +63,7 @@ for i = 1, #gameState[ 'you' ][ 'body' ][ 'data' ] do
     gameState[ 'you' ][ 'body' ][ 'data' ][i][ 'y' ] = gameState[ 'you' ][ 'body' ][ 'data' ][i][ 'y' ] + 1
 end
 
-log( DEBUG, 'Building World Map' )
+-- log( DEBUG, 'Building World Map' )
 local grid = util.buildWorldMap( gameState )
 util.printWorldMap( grid )
 
@@ -67,7 +74,8 @@ util.printWorldMap( grid )
 -- will only look at the closest enemy when deciding the next move
 -- to make.
 if #gameState[ 'snakes' ][ 'data' ] > 2 then
-    log( DEBUG, "WARNING: Multiple enemies detected. Choosing the closest snake for behavior prediction." )
+    -- log( DEBUG, "WARNING: Multiple enemies detected. Choosing the closest snake for behavior prediction." )
+    logger( "debug", "WARNING: Multiple enemies detected. Choosing closest snake for prediction.")
 end
 
 -- Convenience vars
@@ -92,11 +100,13 @@ end
 -- This is just to keep from crashing if we're testing in an arena by ourselves
 -- though I am curious to see what will happen when trying to predict my own behavior!
 if not enemy then
-    log( DEBUG, "WARNING: I am the only snake in the game! Using MYSELF for behavior prediction." )
+    -- log( DEBUG, "WARNING: I am the only snake in the game! Using MYSELF for behavior prediction." )
+    logger("debug", "WARNING: I am the only snake in the game!")
     enemy = me
 end
 
-log( DEBUG, 'Enemy Snake: ' .. enemy[ 'name' ] )
+-- log( DEBUG, 'Enemy Snake: ' .. enemy[ 'name' ] )
+logger("debug", 'Enemy Snake: ' .. enemy['name'])
 local myState = {
     me = me,
     enemy = enemy
@@ -105,8 +115,12 @@ local myState = {
 -- Alpha-Beta Pruning algorithm
 -- This is significantly faster than minimax on a single processor, but very challenging to parallelize
 local bestScore, bestMove = algorithm.alphabeta( grid, myState, 0, -math.huge, math.huge, nil, nil, true, {}, {} )
-log( DEBUG, string.format( 'Best score: %s', bestScore ) )
-log( DEBUG, string.format( 'Best move: %s', inspect( bestMove ) ) )
+
+-- log( DEBUG, string.format( 'Best score: %s', bestScore ) )
+-- log( DEBUG, string.format( 'Best move: %s', inspect( bestMove ) ) )
+
+logger( "debug", string.format( 'Best score: %s', bestScore ) )
+logger( "debug", string.format( 'Best move: %s', inspect( bestMove ) ) )
 
 -- FAILSAFE #1
 -- This is reached if no move is returned by the alphabeta pruning algorithm.
@@ -116,7 +130,9 @@ log( DEBUG, string.format( 'Best move: %s', inspect( bestMove ) ) )
 -- max recursion depth we are able to break free (i.e. trapped by the enemy's tail which
 -- later gets out of the way)
 if not bestMove then
-    log( DEBUG, "WARNING: No move returned from alphabeta!" )
+    -- log( DEBUG, "WARNING: No move returned from alphabeta!" )
+    logger("debug", "WARNING: No best move returned from alphabeta!")
+
     local my_moves = neighbours( myState[ 'me' ][ 'body' ][ 'data' ][1], grid )
     local enemy_moves = neighbours( myState[ 'enemy' ][ 'body' ][ 'data' ][1], grid )
     local safe_moves = util.n_complement( my_moves, enemy_moves )

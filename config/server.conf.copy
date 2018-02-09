@@ -32,12 +32,46 @@ server {
     # Game start.
     location /start {
         default_type "application/json";
+
         if ($request_method != POST ) { return 405; }
 
-        content_by_lua_block {
-            local logger = require "logger"
-            logger.log("luasnake.info", "Game Start!")
+        log_by_lua_block {
+            local json = require "json"
+            local logger = require "resty.logger.socket"
 
+            if not logger.initted() then
+              local ok, err = logger.init{
+                sock_type = "tcp",
+                host = "127.0.0.1",
+                port = 24224,
+                flush_limit = 0,
+                max_retry_times = 3,
+              }
+
+              if not ok then
+                ngx.log(ngx.ERR, "\n\nfailed to initialize the logger:\n ", err)
+                return
+              else
+                ngx.log(ngx.ERR, "\n\n OUR LOGGER IS OK\n\n")
+              end
+            end
+
+            -- debug worked!
+            msg = json.encode({ "luasnake.info", 1308466941, { message = 1001 } })
+
+            ngx.log(ngx.ERR, "\n\nHERE IS MY MESSAGE\t", msg, "\n\n")
+
+            local bytes, err = logger.log(msg)
+
+            if err then
+              ngx.log(ngx.ERR, "\n\nfailed to log message: \n", err)
+              return
+            else
+              ngx.log(ngx.ERR, "\n\n No error, logged the mssage.", bytes)
+            end
+        }
+
+        content_by_lua_block {
             response = {
                 color = "#5DD284",
                 secondary_color = "#FF0000",
