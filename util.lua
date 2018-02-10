@@ -1,16 +1,22 @@
 local util = {}
 
-
 -- Lua optimization: any functions from another module called more than once
 -- are faster if you create a local reference to that function.
-local DEBUG = ngx.DEBUG
-local log = ngx.log
+
+-- TODO REMOVE
+-- local DEBUG = ngx.DEBUG
+-- local log = ngx.log
+-- TODO REMOVE END
+
+local logger = require "logger"
+local log = logger.log
+
 local random = math.random
 
 
 --[[
     PRIVATE METHODS
-]]
+--]]
 
 
 -- @see https://github.com/vadi2/mudlet-lua/blob/2630cbeefc3faef3079556cb06459d1f53b8f842/lua/Other.lua#L467
@@ -31,7 +37,7 @@ end
 
 --[[
     PUBLIC METHODS
-]]
+--]]
 
 
 --- I'M A BELIEBER
@@ -54,8 +60,9 @@ end
 -- @return A 2D table with each cell mapped to food, snakes, etc.
 function util.buildWorldMap( gameState )
     
+    local log_id = "" .. gameState[ 'id' ] .. ":" .. gameState[ 'you' ][ 'id' ]
+
     -- Generate the tile grid
-    log( DEBUG, 'Generating tile grid' )
     local grid = {}
     for y = 1, gameState[ 'height' ] do
         grid[y] = {}
@@ -68,27 +75,43 @@ function util.buildWorldMap( gameState )
     for i = 1, #gameState[ 'food' ][ 'data' ] do
         local food = gameState[ 'food' ][ 'data' ][i]
         grid[ food[ 'y' ] ][ food[ 'x' ] ] = 'O'
-        log( DEBUG, string.format( 'Placed food at [%s, %s]', food[ 'x' ], food[ 'y' ] ) )
+
+        msg = { game_id = log_id, turn = gameState[ 'turn' ], who = "game", item = "food", coordinates = { x = food[ 'x' ], y = food[ 'y' ] } }
+        log("info", msg)
     end
     
     -- Place living snakes
     for i = 1, #gameState[ 'snakes' ][ 'data' ] do
         if gameState[ 'snakes' ][ 'data' ][i][ 'health' ] > 0 then
             local length = #gameState[ 'snakes' ][ 'data' ][i][ 'body' ][ 'data' ]
+            local whoami = gameState[ 'snakes' ][ 'data' ][i][ 'id' ]
+
             for j = 1, length do
                 local snake = gameState[ 'snakes' ][ 'data' ][i][ 'body' ][ 'data' ][j]
+                local health = gameState[ 'snakes' ][ 'data' ][i][ 'health' ]
+                local log_msg = { health = health, game_id = log_id, who = whoami, turn = gameState[ 'turn' ], length = length, coordinates = { x = snake[ 'x' ], y = snake[ 'y' ] } }
+
                 if j == 1 then
                     grid[ snake[ 'y' ] ][ snake[ 'x' ] ] = '@'
-                    log( DEBUG, string.format( 'Placed snake head at [%s, %s]', snake[ 'x' ], snake[ 'y' ] ) )
+                    -- msg = { who = whoami, item = "head", coordinates = { x = snake[ 'x' ], y = snake[ 'y' ] } }
+                    log_msg.item = "head"
+                    log("info", log_msg)
                 elseif j == length then
                     if grid[ snake[ 'y' ] ][ snake[ 'x' ] ] ~= '@' and grid[ snake[ 'y' ] ][ snake[ 'x' ] ] ~= '#' then
                         grid[ snake[ 'y' ] ][ snake[ 'x' ] ] = '*'
                     end
+
+                    -- msg = { who = whoami, item = "tail", coordinates = { x = snake[ 'x' ], y = snake[ 'y' ] } }
+                    log_msg.item = "tail"
+                    log("info", log_msg)
                 else
                     if grid[ snake[ 'y' ] ][ snake[ 'x' ] ] ~= '@' then
                         grid[ snake[ 'y' ] ][ snake[ 'x' ] ] = '#'
                     end
-                    log( DEBUG, string.format( 'Placed snake tail at [%s, %s]', snake[ 'x' ], snake[ 'y' ] ) )
+
+                    log_msg.item = "body"
+                    --msg = { who = whoami, item = "body", coordinates = { x = snake[ 'x' ], y = snake[ 'y' ] } }
+                    log("info", log_msg)
                 end
             end
         end
@@ -158,7 +181,9 @@ function util.printWorldMap( grid )
             str = str .. "\n"
         end
     end
-    log( DEBUG, str )
+
+    -- TODO ?
+    ngx.log( ngx.DEBUG, str )
 end
 
 

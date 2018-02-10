@@ -44,11 +44,12 @@ function lualog.connect()
   end
 end
 
-function lualog.log( tag, message_string )
+function lualog.log( subtag, message_string )
   lualog.connect()
 
-  time = ngx.now
-  msg = json.encode({ tag, time, { message = message_string } } )
+  tag = "luasnake." .. subtag
+  time = ngx.now()
+  msg = json.encode({ tag, time, message_string } )
 
   local bytes, err = logger.log(msg)
   if err then

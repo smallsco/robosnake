@@ -3,12 +3,14 @@ local algorithm = {}
 
 -- Lua optimization: any functions from another module called more than once
 -- are faster if you create a local reference to that function.
-local DEBUG = ngx.DEBUG
-local log = ngx.log
+-- local DEBUG = ngx.DEBUG
+-- local log = ngx.log
 local mdist = util.mdist
 local n_complement = util.n_complement
 local printWorldMap = util.printWorldMap
 
+local logger = require "logger"
+log = logger.log
 
 --[[
     PRIVATE METHODS
@@ -87,28 +89,28 @@ local function heuristic( grid, state, my_moves, enemy_moves )
         state[ 'me' ][ 'body' ][ 'data' ][1][ 'x' ] == state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'x' ]
         and state[ 'me' ][ 'body' ][ 'data' ][1][ 'y' ] == state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'y' ]
     then
-        log( DEBUG, 'Head-on-head collision!' )
+        -- log( "debug", 'Head-on-head collision!' )
         if #state[ 'me' ][ 'body' ][ 'data' ] > #state[ 'enemy' ][ 'body' ][ 'data' ] then
-            log( DEBUG, 'I am bigger and win!' )
+            -- log( "debugger", 'I am bigger and win!' )
             return 2147483647
         elseif #state[ 'me' ][ 'body' ][ 'data' ] < #state[ 'enemy' ][ 'body' ][ 'data' ] then
-            log( DEBUG, 'I am smaller and lose.' )
+            -- log( "debugger", 'I am smaller and lose.' )
             return -2147483648
         else
             -- do not use negative infinity here.
             -- draws are better than losing because the bounty cannot be claimed without a clear victor.
-            log( DEBUG, "It's a draw." )
+            -- log( "debug", "It's a draw." )
             return -2147483647  -- one less than max int size
         end
     end
 
     -- My win/loss conditions
     if #my_moves == 0 then
-        log( DEBUG, 'I am trapped.' )
+        -- log( "debug", 'I am trapped.' )
         return -2147483648
     end
     if state[ 'me' ][ 'health' ] <= 0 then
-        log( DEBUG, 'I am out of health.' )
+        -- log( "debug", 'I am out of health.' )
         return -2147483648
     end
     
@@ -127,18 +129,18 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     -- If the number of squares I can see from my current position is less than my length
     -- then moving to this position *may* trap and kill us, and should be avoided if possible
     if accessible_squares <= #state[ 'me' ][ 'body' ][ 'data' ] then
-        log( DEBUG, 'I smell a trap!' )
+        -- log( "debug", 'I smell a trap!' )
         return -9999999 * (1/percent_accessible)
     end
     
     
     -- Enemy win/loss conditions
     if #enemy_moves == 0 then
-        log( DEBUG, 'Enemy is trapped.' )
+        -- log( "debug", 'Enemy is trapped.' )
         return 2147483647
     end
     if state[ 'enemy' ][ 'health' ] <= 0 then
-        log( DEBUG, 'Enemy is out of health.' )
+        -- log( "debug", 'Enemy is out of health.' )
         return 2147483647
     end
     
@@ -153,7 +155,7 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     -- If the number of squares the enemy can see from their current position is less than their length
     -- then moving to this position *may* trap and kill them, and should be avoided if possible
     if enemy_accessible_squares <= #state[ 'enemy' ][ 'body' ][ 'data' ] then
-        log( DEBUG, 'Enemy might be trapped!' )
+        -- log( "debug", 'Enemy might be trapped!' )
         return 9999999 * percent_accessible
     end
     
@@ -180,14 +182,14 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     if state[ 'me' ][ 'health' ] <= HUNGER_HEALTH then
         foodWeight = 100 - state[ 'me' ][ 'health' ]
     end
-    log( DEBUG, 'Food Weight: ' .. foodWeight )
+    -- log( "debug", 'Food Weight: ' .. foodWeight )
     if foodWeight > 0 then
         for i = 1, #food do
             local dist = mdist( state[ 'me' ][ 'body' ][ 'data' ][1], food[i] )
             -- "i" is used in the score so that two pieces of food that 
             -- are equal distance from me do not have identical weighting
             score = score - ( dist * foodWeight ) - i
-            log( DEBUG, string.format('Food %s, distance %s, score %s', inspect( food[i] ), dist, ( dist * foodWeight ) - i ) )
+            -- log( "debug", string.format('Food %s, distance %s, score %s', inspect( food[i] ), dist, ( dist * foodWeight ) - i ) )
         end
     end
 
@@ -196,25 +198,25 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     for i = 1, #kill_squares do
         local dist = mdist( state[ 'me' ][ 'body' ][ 'data' ][1], kill_squares[i] )
         score = score - (dist * 100)
-        log( DEBUG, string.format('Kill square distance %s, score %s', dist, dist*100 ) )
+        -- log( "debug", string.format('Kill square distance %s, score %s', dist, dist*100 ) )
     end
      
     -- Hang out near the center
     -- Temporarily Disabled
     --[[local dist = mdist( state[ 'me' ][ 'body' ][ 'data' ][1], { x = center_x, y = center_y } )
     score = score - (dist * 100)
-    log( DEBUG, string.format('Center distance %s, score %s', dist, dist*100 ) )]]
+    -- -- log( DEBUG, string.format('Center distance %s, score %s', dist, dist*100 ) )]]
    
  
-    log( DEBUG, 'Original score: ' .. score )
-    log( DEBUG, 'Percent accessible: ' .. percent_accessible )
+    -- log( DEBUG, 'Original score: ' .. score )
+    -- log( DEBUG, 'Percent accessible: ' .. percent_accessible )
     if score < 0 then
         score = score * (1/percent_accessible)
     elseif score > 0 then
         score = score * percent_accessible
     end
     
-    log( DEBUG, 'Score: ' .. score )
+    -- log( "debug", 'Node score: ' .. score )
 
     return score
 end
@@ -272,7 +274,7 @@ end
 -- @param maximizingPlayer True if calculating alpha at this depth, false if calculating beta
 function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMove, maximizingPlayer, prev_grid, prev_enemy_moves )
 
-    log( DEBUG, 'Depth: ' .. depth )
+    -- log( DEBUG, 'Depth: ' .. depth )
 
     local moves = {}
     local my_moves = algorithm.neighbours( state[ 'me' ][ 'body' ][ 'data' ][1], grid )
@@ -301,16 +303,17 @@ function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMo
             and state[ 'me' ][ 'body' ][ 'data' ][1][ 'y' ] == state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'y' ]
         )
     then
-        log( DEBUG, 'Reached MAX_RECURSION_DEPTH or endgame state.' )
+        -- log( "debug", 'Reached MAX_RECURSION_DEPTH or endgame state.' )
         return heuristic( grid, state, my_moves, enemy_moves )
     end
   
     if maximizingPlayer then
-        log( DEBUG, string.format( 'My Turn. Position: %s Possible moves: %s', inspect( state[ 'me' ][ 'body' ][ 'data' ] ), inspect( moves ) ) )
+        -- log( "debug", string.format( 'My Turn. Position: %s Possible moves: %s', inspect( state[ 'me' ][ 'body' ][ 'data' ] ), inspect( moves ) ) )
         for i = 1, #moves do
                         
             -- Update grid and coords for this move
-            log( DEBUG, string.format( 'My move: %s', inspect( moves[i] ) ) )
+            -- log( "debug", string.format( 'My move: %s', inspect( moves[i] ) ) )
+
             local new_grid = deepcopy( grid )
             local new_state = deepcopy( state )
             local eating = false
@@ -386,11 +389,11 @@ function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMo
         end
         return alpha, alphaMove
     else
-        log( DEBUG, string.format( 'Enemy Turn. Position: %s Possible moves: %s', inspect( state[ 'enemy' ][ 'body' ][ 'data' ] ), inspect( moves ) ) )
+        -- log( "debug", string.format( 'Enemy Turn. Position: %s Possible moves: %s', inspect( state[ 'enemy' ][ 'body' ][ 'data' ] ), inspect( moves ) ) )
         for i = 1, #moves do
             
             -- Update grid and coords for this move
-            log( DEBUG, string.format( 'Enemy move: %s', inspect( moves[i] ) ) )
+            -- log( "debug", string.format( 'Enemy move: %s', inspect( moves[i] ) ) )
             local new_grid = deepcopy( grid )
             local new_state = deepcopy( state )
             local eating = false
