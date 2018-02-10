@@ -3,8 +3,6 @@ local algorithm = {}
 
 -- Lua optimization: any functions from another module called more than once
 -- are faster if you create a local reference to that function.
--- local DEBUG = ngx.DEBUG
--- local log = ngx.log
 local mdist = util.mdist
 local n_complement = util.n_complement
 local printWorldMap = util.printWorldMap
@@ -205,7 +203,7 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     -- Temporarily Disabled
     --[[local dist = mdist( state[ 'me' ][ 'body' ][ 'data' ][1], { x = center_x, y = center_y } )
     score = score - (dist * 100)
-    -- -- log( DEBUG, string.format('Center distance %s, score %s', dist, dist*100 ) )]]
+    -- log( DEBUG, string.format('Center distance %s, score %s', dist, dist*100 ) )]]
    
  
     -- log( DEBUG, 'Original score: ' .. score )

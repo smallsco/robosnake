@@ -1,12 +1,15 @@
 '''
-TODO : THIS DESCRIPTION
-
-note: todo to make an actual UUID? Still isn't unique enough...
+Prompts user for game replay choice.
+Searches logs for data and generates
+play-by-play ASCII table.
 '''
 import json
 import glob
 import re
 import time
+import unicodedata
+
+from datetime import datetime
 
 LOG_DIR = '/var/log/td-agent/'
 
@@ -28,22 +31,23 @@ def main():
         matches = re.search('\{.*\}', line)
         data = matches.group(0)
 
-        # convert json string into python dict
         log = json.loads(data)
-        time_ms = log['time']
-        time_utc = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time_ms))
+        log_id = unicodedata.normalize('NFKD', log['log_id']).encode('ascii', 'ignore')
 
-        log_id = log['log_id']
+        ids = re.search('([0-9]*)(?::)(.*)(?::)(.*)', log_id)
 
-        ids = re.search('([0-9]*)(?::)(.*)', log_id)
+        time_float = float(ids.group(3))
+        time_utc = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime( time_float ) )
 
-        # game_id, snake_id, timestamp
-        options.append((ids.group(1), ids.group(2), time_utc))
+        # game_id, my snake_id, timestamp
+        options.append( ( time_utc, ids.group(1), ids.group(2) ) )
 
   print('\nEnter INDEX for which game logfiles to lookup or \'xx\' to replay the most recent')
-  print('format: [INDEX] Game id, Your Snake Id, Timestamp\n')
+
+  print('\n[INDEX]\ttimestamp, game_id, robosnake_id')
   for index, keys in enumerate(options):
-    print(index, keys[:])
+    print('[{}]\t{}'.format(index, str(keys)[1:-1]))
+
 
   choice = input('Choice: ')
   print(choice)

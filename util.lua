@@ -2,17 +2,10 @@ local util = {}
 
 -- Lua optimization: any functions from another module called more than once
 -- are faster if you create a local reference to that function.
-
--- TODO REMOVE
--- local DEBUG = ngx.DEBUG
--- local log = ngx.log
--- TODO REMOVE END
-
 local logger = require "logger"
 local log = logger.log
 
 local random = math.random
-
 
 --[[
     PRIVATE METHODS
@@ -58,9 +51,7 @@ end
 --- Take the BattleSnake arena's state JSON and use it to create our own grid
 -- @param gameState The arena's game state JSON
 -- @return A 2D table with each cell mapped to food, snakes, etc.
-function util.buildWorldMap( gameState )
-    
-    local log_id = "" .. gameState[ 'id' ] .. ":" .. gameState[ 'you' ][ 'id' ]
+function util.buildWorldMap( gameState, log_id )
 
     -- Generate the tile grid
     local grid = {}
@@ -77,7 +68,7 @@ function util.buildWorldMap( gameState )
         grid[ food[ 'y' ] ][ food[ 'x' ] ] = 'O'
 
         msg = { game_id = log_id, turn = gameState[ 'turn' ], who = "game", item = "food", coordinates = { x = food[ 'x' ], y = food[ 'y' ] } }
-        log("info", msg)
+        log("info." .. log_id , msg )
     end
     
     -- Place living snakes
@@ -95,7 +86,7 @@ function util.buildWorldMap( gameState )
                     grid[ snake[ 'y' ] ][ snake[ 'x' ] ] = '@'
                     -- msg = { who = whoami, item = "head", coordinates = { x = snake[ 'x' ], y = snake[ 'y' ] } }
                     log_msg.item = "head"
-                    log("info", log_msg)
+                    log("info." .. log_id, log_msg)
                 elseif j == length then
                     if grid[ snake[ 'y' ] ][ snake[ 'x' ] ] ~= '@' and grid[ snake[ 'y' ] ][ snake[ 'x' ] ] ~= '#' then
                         grid[ snake[ 'y' ] ][ snake[ 'x' ] ] = '*'
@@ -103,7 +94,7 @@ function util.buildWorldMap( gameState )
 
                     -- msg = { who = whoami, item = "tail", coordinates = { x = snake[ 'x' ], y = snake[ 'y' ] } }
                     log_msg.item = "tail"
-                    log("info", log_msg)
+                    log("info." .. log_id, log_msg)
                 else
                     if grid[ snake[ 'y' ] ][ snake[ 'x' ] ] ~= '@' then
                         grid[ snake[ 'y' ] ][ snake[ 'x' ] ] = '#'
@@ -111,7 +102,7 @@ function util.buildWorldMap( gameState )
 
                     log_msg.item = "body"
                     --msg = { who = whoami, item = "body", coordinates = { x = snake[ 'x' ], y = snake[ 'y' ] } }
-                    log("info", log_msg)
+                    log("info." .. log_id, log_msg)
                 end
             end
         end
