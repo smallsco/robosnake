@@ -48,7 +48,6 @@ function util.bieberQuote()
     return bieberquotes[random(#bieberquotes)]
 end
 
-
 --- Take the BattleSnake arena's state JSON and use it to create our own grid
 -- @param gameState The arena's game state JSON
 -- @return A 2D table with each cell mapped to food, snakes, etc.

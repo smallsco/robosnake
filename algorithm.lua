@@ -56,6 +56,14 @@ local function isSafeSquareFloodfill( v )
 end
 
 
+--- Returns true if a square is safe to pass over, false otherwise
+-- @param v The value of a particular tile on the grid
+-- @return boolean
+local function isSafeSquareGraph( v )
+    return v == '.' or v == 'O' or v == '@' or v == '*'
+end
+
+
 -- "Floods" the grid in order to find out how many squares are accessible to us
 -- This ruins the grid, make sure you always work on a deepcopy of the grid!
 -- @see https://en.wikipedia.org/wiki/Flood_fill#Stack-based_recursive_implementation_.28four-way.29
@@ -82,6 +90,193 @@ end
 -- @param enemy_moves Table containing enemy's possible moves
 local function heuristic( grid, state, my_moves, enemy_moves )
 
+    -- get food from grid since it's a pain to update state every time we pass through minimax
+    local food = {}
+    for y = 1, #grid do
+        for x = 1, #grid[y] do
+            if grid[y][x] == 'O' then
+                table.insert( food, { x = x, y = y } )
+            end
+        end
+    end
+    
+    -- build a graph map
+    local graph_map = {}
+    local i = 0
+    for y = 1, #grid do
+        graph_map[y] = {}
+        for x = 1, #grid[y] do
+            graph_map[y][x] = i
+            i = i + 1
+        end
+    end
+   
+   -- build a graph
+    local graph = luagraphs.create( #grid * #grid[1], true )
+    for y = 1, #grid do
+        for x = 1, #grid[1] do
+            if grid[y][x] == '.' or grid[y][x] == 'O' or grid[y][x] == '@' or grid[y][x] == '*' then
+                local n = algorithm.neighbours_graph( {x=x, y=y}, grid )
+                for i = 1, #n do
+                    graph:addEdge( graph_map[y][x], graph_map[ n[i][ 'y' ] ][ n[i][ 'x' ] ], 1 )
+                end
+            end
+        end
+    end
+    
+    -- get connected components
+    local cc = luagraphs_cc.create()
+    cc:run( graph )
+    local my_head_vertex = graph:vertexAt( graph_map[ state[ 'me' ][ 'body' ][ 'data' ][1][ 'y' ] ][ state[ 'me' ][ 'body' ][ 'data' ][1][ 'x' ] ] )
+    local my_head_component = cc:component( my_head_vertex )
+    local my_tail_vertex = graph:vertexAt( graph_map[ state[ 'me' ][ 'body' ][ 'data' ][ #state[ 'me' ][ 'body' ][ 'data' ] ][ 'y' ] ][ state[ 'me' ][ 'body' ][ 'data' ][ #state[ 'me' ][ 'body' ][ 'data' ] ][ 'x' ] ] )
+    local my_tail_component = cc:component( my_tail_vertex )
+    local enemy_head_vertex = graph:vertexAt( graph_map[ state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'y' ] ][ state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'x' ] ] )
+    local enemy_head_component = cc:component( enemy_head_vertex )
+    local enemy_tail_vertex = graph:vertexAt( graph_map[ state[ 'enemy' ][ 'body' ][ 'data' ][ #state[ 'enemy' ][ 'body' ][ 'data' ] ][ 'y' ] ][ state[ 'enemy' ][ 'body' ][ 'data' ][ #state[ 'enemy' ][ 'body' ][ 'data' ] ][ 'x' ] ] )
+    local enemy_tail_component = cc:component( enemy_tail_vertex )
+    
+    log( DEBUG, 'CC COUNT: ' .. cc.count )
+    log( DEBUG, 'CC HEAD ME: ' .. my_head_component )
+    log( DEBUG, 'CC HEAD ENEMY: ' .. enemy_head_component )
+    log( DEBUG, 'CC TAIL ME: ' .. my_tail_component )
+    log( DEBUG, 'CC TAIL ENEMY: ' .. enemy_tail_component )
+    
+    -- connected components debugging
+    --[[for y = 1, #grid do
+        for x = 1, #grid[1] do
+            log( DEBUG, string.format( '[%s,%s]: %s', x, y, cc:component( graph:vertexAt( graph_map[y][x] ) ) ) )
+        end
+    end]]
+    
+    local score = 0
+    
+    -- get food component, distance from me
+    local food_target = 1
+    for i = 1, #food do
+        food[i][ 'comp' ] = cc:component( graph:vertexAt( graph_map[ food[i][ 'y' ] ][ food[i][ 'x' ] ] ) )
+        food[i][ 'dist' ] = mdist( state[ 'me' ][ 'body' ][ 'data' ][1], food[i] )
+    end
+    table.sort( food, function( a, b ) return a[ 'dist' ] < b[ 'dist' ] end )
+    for i = 1, #food do
+        if food[i][ 'comp' ] == my_head_component then
+            food_target = i
+            break
+        end
+    end
+    
+    --[[if #state[ 'me' ][ 'body' ][ 'data' ] <= 2 * #grid[1] + #food then
+    
+        for i = 1, #food do
+            if i == food_target then
+                score = score - food[i][ 'dist' ]
+                log( DEBUG, string.format( 'Food %s, distance %s, score %s', inspect( food[i] ), food[i][ 'dist' ], food[i][ 'dist' ] ) )
+            else
+                if food[i][ 'comp' ] ~= my_head_component then
+                    score = score - 200
+                else
+                    score = score - 100
+                end
+            end
+        end
+        
+    else]]
+    
+        -- If there's food on the board, and I'm hungry, go for it
+        -- If I'm not hungry, ignore it
+        local foodWeight = 0
+        if state[ 'me' ][ 'health' ] <= HUNGER_HEALTH then
+            foodWeight = 100 - state[ 'me' ][ 'health' ]
+        end
+        log( DEBUG, 'Food Weight: ' .. foodWeight )
+        if foodWeight > 0 then
+            for i = 1, #food do
+                if i == food_target then
+                    score = score - ( food[i][ 'dist' ] * foodWeight )
+                    log( DEBUG, string.format( 'Food %s, distance %s, score %s', inspect( food[i] ), food[i][ 'dist' ], food[i][ 'dist' ] * foodWeight ) )
+                else
+                    if food[i][ 'comp' ] ~= my_head_component then
+                        score = score - ( 200 * foodWeight )
+                    else
+                        score = score - ( 100 * foodWeight )
+                    end
+                end
+            end
+        end
+        
+        -- Hang out near the enemy's head
+        local path_length = 1
+        local dj = luagraphs_dj.create()
+        dj:run( graph, graph_map[ state[ 'me' ][ 'body' ][ 'data' ][1][ 'y' ] ][ state[ 'me' ][ 'body' ][ 'data' ][1][ 'x' ] ] )
+        if dj:hasPathTo( graph_map[ state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'y' ] ][ state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'x' ] ] ) then
+            path_length = dj:getPathLength( graph_map[ state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'y' ] ][ state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'x' ] ] )
+        end
+        local dist = mdist( state[ 'me' ][ 'body' ][ 'data' ][1], state[ 'enemy' ][ 'body' ][ 'data' ][1] )
+        score = score - ( dist * 25 * path_length )
+        log( DEBUG, string.format( 'Enemy head distance %s, score %s', dist, dist * 25 * path_length ) )
+    
+    --end
+    
+    -- handle crossing an articulation point
+    --[[if my_head_component ~= my_tail_component then
+        score = score - 500000
+        log( DEBUG, 'I am crossing an articulation point' )
+    end
+    if enemy_head_component ~= enemy_tail_component then
+        score = score + 500000
+        log( DEBUG, 'Enemy is crossing an articulation point' )
+    end]]
+    
+    if #my_moves == 1 then
+        score = score - 20000
+    end
+    if #enemy_moves == 1 then
+        score = score + 20000
+    end
+    
+    -- if the enemy and i are in separate components
+    if my_head_component ~= enemy_head_component then
+        
+        -- get the size of each component
+        local my_head_component_size = 1
+        local enemy_head_component_size = 1
+        for y = 1, #grid do
+            for x = 1, #grid[1] do
+                local component = cc:component( graph:vertexAt( graph_map[y][x] ) )
+                if component == my_head_component then
+                    my_head_component_size = my_head_component_size + 1
+                end
+                if component == enemy_head_component then
+                    enemy_head_component_size = enemy_head_component_size + 1
+                end
+            end
+        end
+        
+        local my_percent_accessible = my_head_component_size / ( #grid * #grid[1] )
+        log( DEBUG, string.format( 'My component size: %s', my_head_component_size ) )
+        log( DEBUG, string.format( 'Enemy component size: %s', enemy_head_component_size ) )
+        
+        
+        if #state[ 'me' ][ 'body' ][ 'data' ] >= my_head_component_size then
+            score = score - 9999999
+            log( DEBUG, 'I am moving into a possible trap' )
+        end
+        if #state[ 'enemy' ][ 'body' ][ 'data' ] >= enemy_head_component_size then
+            score = score + 9999999
+            log( DEBUG, 'Enemy is moving into a possible trap' )
+        end
+        
+        if score > 0 then
+            score = score * my_percent_accessible
+        elseif score < 0 then
+            score = score * ( 1 / my_percent_accessible )
+        end
+        
+        --local diff = my_head_component_size - enemy_head_component_size
+        --score = score + ( 1000 * diff )
+        
+    end
+    
     -- Handle head-on-head collisions.
     if
         state[ 'me' ][ 'body' ][ 'data' ][1][ 'x' ] == state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'x' ]
@@ -90,7 +285,62 @@ local function heuristic( grid, state, my_moves, enemy_moves )
         log( DEBUG, 'Head-on-head collision!' )
         if #state[ 'me' ][ 'body' ][ 'data' ] > #state[ 'enemy' ][ 'body' ][ 'data' ] then
             log( DEBUG, 'I am bigger and win!' )
-            return 2147483647
+            score = score + 2147483647
+        elseif #state[ 'me' ][ 'body' ][ 'data' ] < #state[ 'enemy' ][ 'body' ][ 'data' ] then
+            log( DEBUG, 'I am smaller and lose.' )
+            score = score - 2147483648
+        else
+            -- do not use negative infinity here.
+            -- draws are better than losing because the bounty cannot be claimed without a clear victor.
+            log( DEBUG, "It's a draw." )
+            score = score - 2147483647  -- one less than max int size
+        end
+    end
+
+    -- My loss conditions
+    if #my_moves == 0 then
+        log( DEBUG, 'I am trapped.' )
+        score = score - 2147483648
+    end
+    if state[ 'me' ][ 'health' ] <= 0 then
+        log( DEBUG, 'I am out of health.' )
+        score = score - 2147483648
+    end
+    
+    -- My win (enemy loss) conditions
+    if #enemy_moves == 0 then
+        log( DEBUG, 'Enemy is trapped.' )
+        score = score + 2147483647
+    end
+    if state[ 'enemy' ][ 'health' ] <= 0 then
+        log( DEBUG, 'Enemy is out of health.' )
+        score = score + 2147483647
+    end
+    
+    
+    return score
+
+end
+
+--- The heuristic function used to determine board/gamestate score
+-- @param grid The game grid
+-- @param state The game state
+-- @param my_moves Table containing my possible moves
+-- @param enemy_moves Table containing enemy's possible moves
+local function heuristic_old( grid, state, my_moves, enemy_moves )
+
+    -- Default board score
+    local score = 0
+
+    -- Handle head-on-head collisions.
+    if
+        state[ 'me' ][ 'body' ][ 'data' ][1][ 'x' ] == state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'x' ]
+        and state[ 'me' ][ 'body' ][ 'data' ][1][ 'y' ] == state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'y' ]
+    then
+        log( DEBUG, 'Head-on-head collision!' )
+        if #state[ 'me' ][ 'body' ][ 'data' ] > #state[ 'enemy' ][ 'body' ][ 'data' ] then
+            log( DEBUG, 'I am bigger and win!' )
+            score = score + 2147483647
         elseif #state[ 'me' ][ 'body' ][ 'data' ] < #state[ 'enemy' ][ 'body' ][ 'data' ] then
             log( DEBUG, 'I am smaller and lose.' )
             return -2147483648
@@ -128,18 +378,18 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     -- then moving to this position *may* trap and kill us, and should be avoided if possible
     if accessible_squares <= #state[ 'me' ][ 'body' ][ 'data' ] then
         log( DEBUG, 'I smell a trap!' )
-        return -9999999 * (1/percent_accessible)
+        score = score + -9999999
     end
-    
+
     
     -- Enemy win/loss conditions
     if #enemy_moves == 0 then
         log( DEBUG, 'Enemy is trapped.' )
-        return 2147483647
+        score = score + 2147483647
     end
     if state[ 'enemy' ][ 'health' ] < 0 then
         log( DEBUG, 'Enemy is out of health.' )
-        return 2147483647
+        score = score + 2147483647
     end
     
     -- Run a floodfill from the enemy's current position, to find out:
@@ -154,7 +404,7 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     -- then moving to this position *may* trap and kill them, and should be avoided if possible
     if enemy_accessible_squares <= #state[ 'enemy' ][ 'body' ][ 'data' ] then
         log( DEBUG, 'Enemy might be trapped!' )
-        return 9999999 * percent_accessible
+        score = score + 9999999
     end
     
     
@@ -167,9 +417,6 @@ local function heuristic( grid, state, my_moves, enemy_moves )
             end
         end
     end
-    
-    -- Default board score: 100% of squares accessible
-    local score = 100
     
     local center_x = math.ceil( #grid[1] / 2 )
     local center_y = math.ceil( #grid / 2 )
@@ -204,7 +451,7 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     --[[local dist = mdist( state[ 'me' ][ 'body' ][ 'data' ][1], { x = center_x, y = center_y } )
     score = score - (dist * 100)
     log( DEBUG, string.format('Center distance %s, score %s', dist, dist*100 ) )]]
-   
+    
  
     log( DEBUG, 'Original score: ' .. score )
     log( DEBUG, 'Percent accessible: ' .. percent_accessible )
@@ -223,6 +470,36 @@ end
 --[[
     PUBLIC METHODS
 ]]
+
+--- Returns the set of all coordinate pairs on the board that are adjacent to the given position
+-- @param table pos The source coordinate pair
+-- @param table grid The game grid
+-- @return table The neighbours of the source coordinate pair
+function algorithm.neighbours_graph( pos, grid )
+    local neighbours = {}
+    local north = { x = pos[ 'x' ], y = pos[ 'y' ] - 1 }
+    local south = { x = pos[ 'x' ], y = pos[ 'y' ] + 1 }
+    local east = { x = pos[ 'x' ] + 1, y = pos[ 'y' ] }
+    local west = { x = pos[ 'x' ] - 1, y = pos[ 'y' ] }
+    
+    local height = #grid
+    local width = #grid[1]
+    
+    if north[ 'y' ] > 0 and north[ 'y' ] <= height and isSafeSquareGraph( grid[ north[ 'y' ] ][ north[ 'x' ] ] ) then
+        table.insert( neighbours, north )
+    end
+    if south[ 'y' ] > 0 and south[ 'y' ] <= height and isSafeSquareGraph( grid[ south[ 'y' ] ][ south[ 'x' ] ] ) then
+        table.insert( neighbours, south )
+    end
+    if east[ 'x' ] > 0 and east[ 'x' ] <= width and isSafeSquareGraph( grid[ east[ 'y' ] ][ east[ 'x' ] ] ) then
+        table.insert( neighbours, east )
+    end
+    if west[ 'x' ] > 0 and west[ 'x' ] <= width and isSafeSquareGraph( grid[ west[ 'y' ] ][ west[ 'x' ] ] ) then
+        table.insert( neighbours, west )
+    end
+    
+    return neighbours
+end
 
 --- Returns the set of all coordinate pairs on the board that are adjacent to the given position
 -- @param table pos The source coordinate pair
