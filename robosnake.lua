@@ -20,6 +20,8 @@
 -- Lua optimization: any functions from another module called more than once
 -- are faster if you create a local reference to that function.
 
+-- local game_time = game_start_time
+
 local mdist = util.mdist
 local neighbours = algorithm.neighbours
 local now = ngx.now
@@ -28,6 +30,19 @@ local update_time = ngx.update_time
 -- Lua socket logger
 local logger = require "logger"
 local log = logger.log
+
+local redis = require "resty.redis"
+local red = redis:new()
+
+red:set_timeout(1000) -- 1 sec
+
+local ok, err = red:connect("127.0.0.1", 6379)
+if not ok then
+    ngx.say("failed to connect: ", err)
+end
+
+local start_time = red:get("GAME_START_TIME")
+
 
 --[[
     MAIN APP LOGIC
@@ -50,7 +65,7 @@ local gameState = cjson.decode( request_body )
     game id and snake id for each restart, but different
     start times. We use all three to create a shared log_id
 --]]
-local log_id = "" .. gameState[ 'id' ] .. ":" .. gameState[ 'you' ][ 'id' ] .. ":" .. now()
+local log_id = "" .. gameState[ 'id' ] .. ":" .. gameState[ 'you' ][ 'id' ] .. ":" .. start_time
 
 local INFO = "info." .. log_id
 local DEBUG = "debug." .. log_id
@@ -58,7 +73,7 @@ local INFO = "error." .. log_id
 
 -- Log lookup key for reference, once
 if gameState[ 'turn' ] == 0 then
-    log("replay_key", { turn = gameState['turn'], log_id = log_id, time = ngx.now() } )
+    log("replay_key", { turn = gameState['turn'], log_id = log_id, time = start_time } )
 end
 
 log(INFO, { turn = gameState[ 'turn' ], who = "game", game_id = log_id, width = gameState[ 'width' ], height = gameState[ 'height' ] } )

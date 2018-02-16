@@ -32,7 +32,6 @@ end
     PUBLIC METHODS
 --]]
 
-
 --- I'M A BELIEBER
 -- @return a random quote from Justin Bieber
 function util.bieberQuote()
