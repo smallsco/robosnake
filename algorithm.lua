@@ -7,8 +7,8 @@ local mdist = util.mdist
 local n_complement = util.n_complement
 local printWorldMap = util.printWorldMap
 
-local logger = require "logger"
-log = logger.log
+-- local logger = require "logger"
+-- log = logger.log
 
 --[[
     PRIVATE METHODS

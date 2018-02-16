@@ -2,6 +2,7 @@ local util = {}
 
 -- Lua optimization: any functions from another module called more than once
 -- are faster if you create a local reference to that function.
+
 local logger = require "logger"
 local log = logger.log
 
@@ -172,7 +173,6 @@ function util.printWorldMap( grid )
         end
     end
 
-    -- TODO ?
     ngx.log( ngx.DEBUG, str )
 end
 

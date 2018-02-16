@@ -2,6 +2,11 @@
 Prompts user for game replay choice.
 Searches logs for data and generates
 play-by-play ASCII table.
+
+TODOs:
+  * Get snake death rattle
+  * Get board width, height
+  * Get snake health
 '''
 import json
 import glob
@@ -224,6 +229,7 @@ def transform(data_list):
     if what == 'food':
       c = data['coordinates']
       turns[turn]['food']['data'].append({'x': c['x'], 'y': c['y']})
+
     elif what == 'head' or what == 'tail' or what == 'body':
       c = data['coordinates']
       id = who
@@ -239,14 +245,16 @@ def transform(data_list):
             'x': c['x'],
             'y': c['y']
           }],
-          'length': 99,
-          'health': 99
+          'length': 99, # TODO
+          'health': 99  # TODO
         }
 
         turns[turn]['snakes']['data'].append(data)
 
       else:
           snake[0]['data'].append({'object': what, 'x': c['x'], 'y': c['y']})
+
+      # TODO : ADD DEATH RATTLE
 
   return turns
 
