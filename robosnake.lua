@@ -20,8 +20,6 @@
 -- Lua optimization: any functions from another module called more than once
 -- are faster if you create a local reference to that function.
 
--- local game_time = game_start_time
-
 local mdist = util.mdist
 local neighbours = algorithm.neighbours
 local now = ngx.now
@@ -31,6 +29,7 @@ local update_time = ngx.update_time
 local logger = require "logger"
 local log = logger.log
 
+-- Redis cache layer for logging
 local redis = require "resty.redis"
 local red = redis:new()
 
@@ -40,8 +39,6 @@ local ok, err = red:connect("127.0.0.1", 6379)
 if not ok then
     ngx.say("failed to connect: ", err)
 end
-
-local start_time = red:get("GAME_START_TIME")
 
 
 --[[
@@ -54,9 +51,6 @@ math.randomseed( os.time() )
 -- Get the POST request and decode the JSON
 local request_body = ngx.var.request_body
 
--- Uncomment on localhost play
--- ngx.log(ngx.DEBUG, 'Got request data: ' .. request_body )
-
 local gameState = cjson.decode( request_body )
 
 --[[
@@ -64,17 +58,31 @@ local gameState = cjson.decode( request_body )
     E.g., One instance of the game board will have the same               
     game id and snake id for each restart, but different
     start times. We use all three to create a shared log_id
---]]
-local log_id = "" .. gameState[ 'id' ] .. ":" .. gameState[ 'you' ][ 'id' ] .. ":" .. start_time
 
+    We create a unique log_id based on turn 0's timestamp. This
+    is written to the cache, and retrieved based on game and snake ids.
+--]]
+
+local game_start_time = ''
+
+if gameState[ 'turn' ] == 0 then
+    game_start_time = ngx.now()
+
+    local redkey = "" .. gameState[ 'id' ] .. ":" .. gameState[ 'you' ][ 'id' ]
+    red:set(redkey, game_start_time)
+
+    log("replay_key", { log_id = "" .. gameState[ 'id' ] .. ":" .. gameState[ 'you' ][ 'id' ] .. ":" .. game_start_time } )
+else
+    local redkey = "" .. gameState[ 'id' ] .. ":" .. gameState[ 'you' ][ 'id' ]
+    game_start_time = red:get(redkey)
+end
+
+local log_id = "" .. gameState[ 'id' ] .. ":" .. gameState[ 'you' ][ 'id' ] .. ":" .. game_start_time
+
+-- Logging tags
 local INFO = "info." .. log_id
 local DEBUG = "debug." .. log_id
 local INFO = "error." .. log_id
-
--- Log lookup key for reference, once
-if gameState[ 'turn' ] == 0 then
-    log("replay_key", { turn = gameState['turn'], log_id = log_id, time = start_time } )
-end
 
 log(INFO, { turn = gameState[ 'turn' ], who = "game", game_id = log_id, width = gameState[ 'width' ], height = gameState[ 'height' ] } )
 
