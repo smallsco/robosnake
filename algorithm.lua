@@ -82,6 +82,9 @@ end
 -- @param enemy_moves Table containing enemy's possible moves
 local function heuristic( grid, state, my_moves, enemy_moves )
 
+    -- Default board score
+    local score = 0
+
     -- Handle head-on-head collisions.
     if
         state[ 'me' ][ 'body' ][ 'data' ][1][ 'x' ] == state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'x' ]
@@ -90,7 +93,7 @@ local function heuristic( grid, state, my_moves, enemy_moves )
         log( DEBUG, 'Head-on-head collision!' )
         if #state[ 'me' ][ 'body' ][ 'data' ] > #state[ 'enemy' ][ 'body' ][ 'data' ] then
             log( DEBUG, 'I am bigger and win!' )
-            return 2147483647
+            score = score + 2147483647
         elseif #state[ 'me' ][ 'body' ][ 'data' ] < #state[ 'enemy' ][ 'body' ][ 'data' ] then
             log( DEBUG, 'I am smaller and lose.' )
             return -2147483648
@@ -128,18 +131,18 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     -- then moving to this position *may* trap and kill us, and should be avoided if possible
     if accessible_squares <= #state[ 'me' ][ 'body' ][ 'data' ] then
         log( DEBUG, 'I smell a trap!' )
-        return -9999999 * (1/percent_accessible)
+        return -9999999 * ( 1 / percent_accessible )
     end
-    
+
     
     -- Enemy win/loss conditions
     if #enemy_moves == 0 then
         log( DEBUG, 'Enemy is trapped.' )
-        return 2147483647
+        score = score + 2147483647
     end
     if state[ 'enemy' ][ 'health' ] < 0 then
         log( DEBUG, 'Enemy is out of health.' )
-        return 2147483647
+        score = score + 2147483647
     end
     
     -- Run a floodfill from the enemy's current position, to find out:
@@ -154,7 +157,7 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     -- then moving to this position *may* trap and kill them, and should be avoided if possible
     if enemy_accessible_squares <= #state[ 'enemy' ][ 'body' ][ 'data' ] then
         log( DEBUG, 'Enemy might be trapped!' )
-        return 9999999 * percent_accessible
+        score = score + 9999999
     end
     
     
@@ -167,9 +170,6 @@ local function heuristic( grid, state, my_moves, enemy_moves )
             end
         end
     end
-    
-    -- Default board score: 100% of squares accessible
-    local score = 100
     
     local center_x = math.ceil( #grid[1] / 2 )
     local center_y = math.ceil( #grid / 2 )
@@ -204,7 +204,7 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     --[[local dist = mdist( state[ 'me' ][ 'body' ][ 'data' ][1], { x = center_x, y = center_y } )
     score = score - (dist * 100)
     log( DEBUG, string.format('Center distance %s, score %s', dist, dist*100 ) )]]
-   
+    
  
     log( DEBUG, 'Original score: ' .. score )
     log( DEBUG, 'Percent accessible: ' .. percent_accessible )
