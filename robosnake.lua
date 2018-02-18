@@ -63,11 +63,9 @@ local gameState = cjson.decode( request_body )
     is written to the cache, and retrieved based on game and snake ids.
 --]]
 
-local game_start_time = ''
+local game_start_time = ngx.now()
 
 if gameState[ 'turn' ] == 0 then
-    game_start_time = ngx.now()
-
     local redkey = "" .. gameState[ 'id' ] .. ":" .. gameState[ 'you' ][ 'id' ]
     red:set(redkey, game_start_time)
 
@@ -147,11 +145,12 @@ local myState = {
     enemy = enemy
 }
 
+ngx.log(ngx.DEBUG, log_id)
 -- Alpha-Beta Pruning algorithm
 -- This is significantly faster than minimax on a single processor, but very challenging to parallelize
-local bestScore, bestMove = algorithm.alphabeta( grid, myState, 0, -math.huge, math.huge, nil, nil, true, {}, {} )
+local bestScore, bestMove = algorithm.alphabeta( grid, myState, 0, -math.huge, math.huge, nil, nil, true, {}, {}, log_id )
 
--- log(DEBUG, string.format( 'Best score: %s\tBest move: %s', bestScore, inspect( bestMove ) ) )
+log(DEBUG, string.format( 'Best score: %s\tBest move: %s', bestScore, inspect( bestMove ) ) )
 
 -- FAILSAFE #1
 -- This is reached if no move is returned by the alphabeta pruning algorithm.
@@ -195,7 +194,7 @@ end
 -- We're dead. This only exists to ensure that we always return a valid JSON response
 -- to the game board. It always goes left.
 if not bestMove then
-    -- log(DEBUG, "FATAL: Wall collision unavoiable. Moving left!")
+    log(DEBUG, "FATAL: Wall collision unavoiable. Moving left!")
     bestMove = { x = me[ 'body' ][ 'data' ][1][ 'x' ] - 1, y = me[ 'body' ][ 'data' ][1][ 'y' ] }
 end
 
@@ -217,7 +216,7 @@ respTime = endTime - ngx.ctx.startTime
 -- then do the garbage collection in the worker process before handling the next request
 local ok, err = ngx.eof()
 if not ok then
-    log(ERROR, "Could not complete ngx EOF function\t" .. err)
+    ngx.log(ngx.err, "Could not complete ngx EOF function\t" .. err)
 end
 collectgarbage()
 collectgarbage()

@@ -7,8 +7,8 @@ local mdist = util.mdist
 local n_complement = util.n_complement
 local printWorldMap = util.printWorldMap
 
--- local logger = require "logger"
--- log = logger.log
+local logger = require "logger"
+log = logger.log
 
 --[[
     PRIVATE METHODS
@@ -80,7 +80,10 @@ end
 -- @param state The game state
 -- @param my_moves Table containing my possible moves
 -- @param enemy_moves Table containing enemy's possible moves
-local function heuristic( grid, state, my_moves, enemy_moves )
+local function heuristic( grid, state, my_moves, enemy_moves, log_id )
+    local DEBUG = "debug." .. log_id
+    local INFO = "info." .. log_id
+
 
     -- Default board score
     local score = 0
@@ -90,24 +93,24 @@ local function heuristic( grid, state, my_moves, enemy_moves )
         state[ 'me' ][ 'body' ][ 'data' ][1][ 'x' ] == state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'x' ]
         and state[ 'me' ][ 'body' ][ 'data' ][1][ 'y' ] == state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'y' ]
     then
-        -- log( "debug", 'Head-on-head collision!' )
+        log( DEBUG, 'Head-on-head collision!' )
         if #state[ 'me' ][ 'body' ][ 'data' ] > #state[ 'enemy' ][ 'body' ][ 'data' ] then
             log( DEBUG, 'I am bigger and win!' )
             score = score + 2147483647
         elseif #state[ 'me' ][ 'body' ][ 'data' ] < #state[ 'enemy' ][ 'body' ][ 'data' ] then
-            -- log( "debugger", 'I am smaller and lose.' )
+            log( DEBUG, 'I am smaller and lose.' )
             return -2147483648
         else
             -- do not use negative infinity here.
             -- draws are better than losing because the bounty cannot be claimed without a clear victor.
-            -- log( "debug", "It's a draw." )
+            log( DEBUG, "It's a draw." )
             return -2147483647  -- one less than max int size
         end
     end
 
     -- My win/loss conditions
     if #my_moves == 0 then
-        -- log( "debug", 'I am trapped.' )
+        log( DEBUG, 'I am trapped.' )
         return -2147483648
     end
 
@@ -181,14 +184,14 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     if state[ 'me' ][ 'health' ] <= HUNGER_HEALTH then
         foodWeight = 100 - state[ 'me' ][ 'health' ]
     end
-    -- log( "debug", 'Food Weight: ' .. foodWeight )
+    log( DEBUG, 'Food Weight: ' .. foodWeight )
     if foodWeight > 0 then
         for i = 1, #food do
             local dist = mdist( state[ 'me' ][ 'body' ][ 'data' ][1], food[i] )
             -- "i" is used in the score so that two pieces of food that 
             -- are equal distance from me do not have identical weighting
             score = score - ( dist * foodWeight ) - i
-            -- log( "debug", string.format('Food %s, distance %s, score %s', inspect( food[i] ), dist, ( dist * foodWeight ) - i ) )
+            log( DEBUG, string.format('Food %s, distance %s, score %s', inspect( food[i] ), dist, ( dist * foodWeight ) - i ) )
         end
     end
 
@@ -197,7 +200,7 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     for i = 1, #kill_squares do
         local dist = mdist( state[ 'me' ][ 'body' ][ 'data' ][1], kill_squares[i] )
         score = score - (dist * 100)
-        -- log( "debug", string.format('Kill square distance %s, score %s', dist, dist*100 ) )
+        log( DEBUG, string.format('Kill square distance %s, score %s', dist, dist*100 ) )
     end
      
     -- Hang out near the center
@@ -206,16 +209,16 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     score = score - (dist * 100)
 
     log( DEBUG, string.format('Center distance %s, score %s', dist, dist*100 ) )]]
- 
-    -- log( DEBUG, 'Original score: ' .. score )
-    -- log( DEBUG, 'Percent accessible: ' .. percent_accessible )
+    log( DEBUG, 'Original score: ' .. score )
+    log( DEBUG, 'Percent accessible: ' .. percent_accessible )
+
     if score < 0 then
         score = score * (1/percent_accessible)
     elseif score > 0 then
         score = score * percent_accessible
     end
     
-    -- log( "debug", 'Node score: ' .. score )
+    log( DEBUG, 'Node score: ' .. score )
 
     return score
 end
@@ -271,9 +274,11 @@ end
 -- @param alphaMove The best move at the current depth
 -- @param betaMove The worst move at the current depth
 -- @param maximizingPlayer True if calculating alpha at this depth, false if calculating beta
-function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMove, maximizingPlayer, prev_grid, prev_enemy_moves )
+function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMove, maximizingPlayer, prev_grid, prev_enemy_moves, log_id)
+    local DEBUG = "debug." .. log_id
+    local INFO = "info." .. log_id
 
-    -- log( DEBUG, 'Depth: ' .. depth )
+    log(DEBUG, 'Depth: ' .. depth )
 
     local moves = {}
     local my_moves = algorithm.neighbours( state[ 'me' ][ 'body' ][ 'data' ][1], grid )
@@ -302,16 +307,17 @@ function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMo
             and state[ 'me' ][ 'body' ][ 'data' ][1][ 'y' ] == state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'y' ]
         )
     then
-        -- log( "debug", 'Reached MAX_RECURSION_DEPTH or endgame state.' )
-        return heuristic( grid, state, my_moves, enemy_moves )
+        log( DEBUG, 'Reached MAX_RECURSION_DEPTH or endgame state.' )
+        return heuristic( grid, state, my_moves, enemy_moves, log_id )
     end
   
     if maximizingPlayer then
-        -- log( "debug", string.format( 'My Turn. Position: %s Possible moves: %s', inspect( state[ 'me' ][ 'body' ][ 'data' ] ), inspect( moves ) ) )
+        log( DEBUG, string.format( 'My Turn. Position: %s Possible moves: %s', inspect( state[ 'me' ][ 'body' ][ 'data' ] ), inspect( moves ) ) )
+
         for i = 1, #moves do
                         
             -- Update grid and coords for this move
-            -- log( "debug", string.format( 'My move: %s', inspect( moves[i] ) ) )
+            log( DEBUG, string.format( 'My move: %s', inspect( moves[i] ) ) )
 
             local new_grid = deepcopy( grid )
             local new_state = deepcopy( state )
@@ -379,7 +385,7 @@ function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMo
             
             printWorldMap( new_grid )
             
-            local newAlpha = algorithm.alphabeta( new_grid, new_state, depth + 1, alpha, beta, alphaMove, betaMove, false, grid, enemy_moves )
+            local newAlpha = algorithm.alphabeta( new_grid, new_state, depth + 1, alpha, beta, alphaMove, betaMove, false, grid, enemy_moves, log_id )
             if newAlpha > alpha then
                 alpha = newAlpha
                 alphaMove = moves[i]
@@ -388,11 +394,12 @@ function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMo
         end
         return alpha, alphaMove
     else
-        -- log( "debug", string.format( 'Enemy Turn. Position: %s Possible moves: %s', inspect( state[ 'enemy' ][ 'body' ][ 'data' ] ), inspect( moves ) ) )
+        log( DEBUG, string.format( 'Enemy Turn. Position: %s Possible moves: %s', inspect( state[ 'enemy' ][ 'body' ][ 'data' ] ), inspect( moves ) ) )
+
         for i = 1, #moves do
             
             -- Update grid and coords for this move
-            -- log( "debug", string.format( 'Enemy move: %s', inspect( moves[i] ) ) )
+            log( DEBUG, string.format( 'Enemy move: %s', inspect( moves[i] ) ) )
             local new_grid = deepcopy( grid )
             local new_state = deepcopy( state )
             local eating = false
@@ -459,7 +466,7 @@ function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMo
             
             printWorldMap( new_grid )
             
-            local newBeta = algorithm.alphabeta( new_grid, new_state, depth + 1, alpha, beta, alphaMove, betaMove, true, {}, {} )
+            local newBeta = algorithm.alphabeta( new_grid, new_state, depth + 1, alpha, beta, alphaMove, betaMove, true, {}, {}, log_id )
             if newBeta < beta then
                 beta = newBeta
                 betaMove = moves[i]

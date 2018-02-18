@@ -208,12 +208,15 @@ def transform(data_list):
   
   turns = []
 
-  for data in data_list:
-    data = json.loads(data)
+  for str_data in data_list:
+    data = json.loads(str_data)
 
-    who = unicodedata.normalize('NFKD', data.get('who')).encode('ascii', 'ignore')
-    what = unicodedata.normalize('NFKD', data.get('item')).encode('ascii', 'ignore')
+    # protect against log mistakes
+    if isinstance(data, unicode):
+      continue
 
+    who = data.get('who')
+    what = data.get('item')
     turn = data.get('turn')
 
     if len(turns) <= turn:
@@ -303,8 +306,8 @@ def generate_printable_board(game_data, robosnake_id):
   game_board_per_turn = []
 
   for turn in game_data:
-    board_width = turn['width']
-    board_height = turn['height']
+    board_width = turn['width'] + 1 # TODO : FIX
+    board_height = turn['height'] + 1 # TODO : FIX
 
     turn_index = turn['turn']
 
@@ -318,8 +321,6 @@ def generate_printable_board(game_data, robosnake_id):
     food_list = turn['food']['data']
     for food in food_list:
       game_board[food['y']][food['x']] = food_space
-
-    # print(turn)
 
     # Inject snake bodies
     snake_list = turn['snakes']['data']
