@@ -38,8 +38,6 @@ def get_replay_keys():
   if not replayFileExists:
     raise Exception('No matches have been played yet.')
 
-  print(replayFileExists)
-
   for filename in replayFileExists:
     with open(filename, 'r') as key_file:
       for line in key_file:
@@ -303,11 +301,12 @@ def generate_printable_board(game_data, robosnake_id):
   food_space =  u'\u2022' # solid bullet
 
   # iterate over data; build all turns into strings
+  # we must adjust the provided indexes from 1 to 0 count
   game_board_per_turn = []
 
   for turn in game_data:
-    board_width = turn['width'] + 1 # TODO : FIX
-    board_height = turn['height'] + 1 # TODO : FIX
+    board_width = turn['width'] # + 1 # TODO : FIX
+    board_height = turn['height'] # + 1 # TODO : FIX
 
     turn_index = turn['turn']
 
@@ -320,7 +319,9 @@ def generate_printable_board(game_data, robosnake_id):
     # Inject food items
     food_list = turn['food']['data']
     for food in food_list:
-      game_board[food['y']][food['x']] = food_space
+      y_index = food['y'] - 1
+      x_index = food['x'] - 1
+      game_board[y_index][x_index] = food_space
 
     # Inject snake bodies
     snake_list = turn['snakes']['data']
@@ -328,7 +329,9 @@ def generate_printable_board(game_data, robosnake_id):
       snake_key = robosnake_id if snake['id'] == robosnake_id else 'enemy'
 
       for mass in snake['data']:
-        game_board[mass['y']][mass['x']] = snake_bodies[mass['object']][snake_key]
+        y_index = mass['y'] - 1
+        x_index = mass['x'] - 1
+        game_board[y_index][x_index] = snake_bodies[mass['object']][snake_key]
 
     # Convert rows into unicode strings; store in new board container
     printable_rows = []
@@ -346,6 +349,9 @@ def generate_printable_board(game_data, robosnake_id):
 
 def render_turn_and_data(game_data, game_board, turn):
   health_string = '\n'
+  
+  print(len(game_data), turn)
+
   for snake in game_data[turn]['snakes']['data']:
     health_string += 'Snake: {}\tHealth: {}\n'.format(snake['id'], snake['health'])
 
@@ -360,7 +366,6 @@ def render_game_replay(game_data, robosnake_id):
 
   print('\n\nROBOSNAKE | INSTANT REPLAY\n\nEnter 2 for NEXT turn, 1 for PREVIOUS, any other number to EXIT.')  
   print('(This match played {} turns.)'.format(len(game_data)))
-  # TODO : print winner
 
   turn = 0
   render_turn_and_data(game_data, game_board, turn)
@@ -369,12 +374,12 @@ def render_game_replay(game_data, robosnake_id):
     choice = input('Input: ')
 
     if choice == 2:
-      if turn == len(game_data):
+      if turn+1 == len(game_data):
         print('There are no future moves to show.')
         continue
       turn += 1
     elif choice == 1:
-        if turn == 0:
+        if turn-1 == -1:
           print('There are no older moves to show.')
           continue
         turn -= 1
