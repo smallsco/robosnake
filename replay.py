@@ -4,7 +4,7 @@ Searches logs for data and generates
 play-by-play ASCII table.
 
 TODOs:
-  * Get snake death rattle
+  * Get snake death rattle / winner
   * Get board width, height
   * Get snake health
 '''
@@ -16,6 +16,7 @@ import unicodedata
 import sys
 import multiprocessing as mp
 import os
+import copy
 
 from datetime import datetime
 
@@ -272,16 +273,122 @@ def search_and_return_log_data():
 
   if len(payloads) == 0:
     raise Exception('FATAL: No log data found')
-  
-  return transform(payloads)
 
+  # return robosnake id  
+  return transform(payloads), key[1]
+
+
+def generate_printable_board(game_data, robosnake_id):
+  """
+  Renders each turn in ASCII art. Prompts user to navigate
+  between turns.
+  @param game_data JSON : list of turns
+  """
+
+  ## Unicode Printables Declarations ##
+
+  snake_bodies = {
+    # 'at', asterisk
+    'head': { robosnake_id: u'\u0040', 'enemy': u'\u2731' },
+    # Solid Square, Empty Square
+    'body': { robosnake_id: u'\u25A0', 'enemy': u'\u25A1' },
+    # Inverse Bullet, 'pound'
+    'tail': { robosnake_id: u'\u25D8', 'enemy': u'\u2317' }
+  }
+
+  empty_space = u'\u25E6' # empty bullet
+  food_space =  u'\u2022' # solid bullet
+
+  # iterate over data; build all turns into strings
+  game_board_per_turn = []
+
+  for turn in game_data:
+    board_width = turn['width']
+    board_height = turn['height']
+
+    turn_index = turn['turn']
+
+    # Create basic rows
+    empty_row = [ empty_space for w in range(board_width)]
+
+    # Create container for all rows
+    game_board = [ copy.deepcopy(empty_row) for h in range(board_height)]
+
+    # Inject food items
+    food_list = turn['food']['data']
+    for food in food_list:
+      game_board[food['y']][food['x']] = food_space
+
+    # print(turn)
+
+    # Inject snake bodies
+    snake_list = turn['snakes']['data']
+    for snake in snake_list:
+      snake_key = robosnake_id if snake['id'] == robosnake_id else 'enemy'
+
+      for mass in snake['data']:
+        game_board[mass['y']][mass['x']] = snake_bodies[mass['object']][snake_key]
+
+    # Convert rows into unicode strings; store in new board container
+    printable_rows = []
+    for row in game_board:
+      unicode_string = unicode.join(u' ', (x for x in row))
+      printable_rows.append(unicode_string)
+
+    # convert each row array into single unicode string
+    game_board_printable = unicode.join(u'\n', (x for x in printable_rows))
+
+    game_board_per_turn.insert(turn_index, game_board_printable)
+
+  return game_board_per_turn
+
+
+def render_turn_and_data(game_data, game_board, turn):
+  health_string = '\n'
+  for snake in game_data[turn]['snakes']['data']:
+    health_string += 'Snake: {}\tHealth: {}\n'.format(snake['id'], snake['health'])
+
+  print('\nTurn {}\n'.format(turn))
+
+  print(game_board[turn])
+  
+  print(health_string)
+
+def render_game_replay(game_data, robosnake_id):
+  game_board = generate_printable_board(game_data, robosnake_id)
+
+  print('\n\nROBOSNAKE | INSTANT REPLAY\n\nEnter 2 for NEXT turn, 1 for PREVIOUS, any other number to EXIT.')  
+  print('(This match played {} turns.)'.format(len(game_data)))
+  # TODO : print winner
+
+  turn = 0
+  render_turn_and_data(game_data, game_board, turn)
+
+  while True:
+    choice = input('Input: ')
+
+    if choice == 2:
+      if turn == len(game_data):
+        print('There are no future moves to show.')
+        continue
+      turn += 1
+    elif choice == 1:
+        if turn == 0:
+          print('There are no older moves to show.')
+          continue
+        turn -= 1
+    else:
+      sys.exit(0)
+
+    render_turn_and_data(game_data, game_board, turn)
+  
 
 def main():
+  # Returns turn-index JSON game data, and OUR snake id
+  game_data, robosnake_id = search_and_return_log_data()
 
-  # Each entry in the data encapsulates one turn
-  turn_data = search_and_return_log_data()
-  
-  print('\n\n{}'.format(turn_data))
+  render_game_replay(game_data, robosnake_id)
+
 
 if __name__ == '__main__':
   main()
