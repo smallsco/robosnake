@@ -82,6 +82,9 @@ end
 -- @param enemy_moves Table containing enemy's possible moves
 local function heuristic( grid, state, my_moves, enemy_moves )
 
+    -- Default board score
+    local score = 0
+
     -- Handle head-on-head collisions.
     if
         state[ 'me' ][ 'body' ][ 'data' ][1][ 'x' ] == state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'x' ]
@@ -89,8 +92,8 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     then
         -- log( "debug", 'Head-on-head collision!' )
         if #state[ 'me' ][ 'body' ][ 'data' ] > #state[ 'enemy' ][ 'body' ][ 'data' ] then
-            -- log( "debugger", 'I am bigger and win!' )
-            return 2147483647
+            log( DEBUG, 'I am bigger and win!' )
+            score = score + 2147483647
         elseif #state[ 'me' ][ 'body' ][ 'data' ] < #state[ 'enemy' ][ 'body' ][ 'data' ] then
             -- log( "debugger", 'I am smaller and lose.' )
             return -2147483648
@@ -107,8 +110,9 @@ local function heuristic( grid, state, my_moves, enemy_moves )
         -- log( "debug", 'I am trapped.' )
         return -2147483648
     end
-    if state[ 'me' ][ 'health' ] <= 0 then
-        -- log( "debug", 'I am out of health.' )
+
+    if state[ 'me' ][ 'health' ] < 0 then
+        log( DEBUG, 'I am out of health.' )
         return -2147483648
     end
     
@@ -127,19 +131,19 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     -- If the number of squares I can see from my current position is less than my length
     -- then moving to this position *may* trap and kill us, and should be avoided if possible
     if accessible_squares <= #state[ 'me' ][ 'body' ][ 'data' ] then
-        -- log( "debug", 'I smell a trap!' )
-        return -9999999 * (1/percent_accessible)
+        log( DEBUG, 'I smell a trap!' )
+        return -9999999 * ( 1 / percent_accessible )
     end
-    
+
     
     -- Enemy win/loss conditions
     if #enemy_moves == 0 then
-        -- log( "debug", 'Enemy is trapped.' )
-        return 2147483647
+        log( DEBUG, 'Enemy is trapped.' )
+        score = score + 2147483647
     end
-    if state[ 'enemy' ][ 'health' ] <= 0 then
-        -- log( "debug", 'Enemy is out of health.' )
-        return 2147483647
+    if state[ 'enemy' ][ 'health' ] < 0 then
+        log( DEBUG, 'Enemy is out of health.' )
+        score = score + 2147483647
     end
     
     -- Run a floodfill from the enemy's current position, to find out:
@@ -153,8 +157,8 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     -- If the number of squares the enemy can see from their current position is less than their length
     -- then moving to this position *may* trap and kill them, and should be avoided if possible
     if enemy_accessible_squares <= #state[ 'enemy' ][ 'body' ][ 'data' ] then
-        -- log( "debug", 'Enemy might be trapped!' )
-        return 9999999 * percent_accessible
+        log( DEBUG, 'Enemy might be trapped!' )
+        score = score + 9999999
     end
     
     
@@ -167,9 +171,6 @@ local function heuristic( grid, state, my_moves, enemy_moves )
             end
         end
     end
-    
-    -- Default board score: 100% of squares accessible
-    local score = 100
     
     local center_x = math.ceil( #grid[1] / 2 )
     local center_y = math.ceil( #grid / 2 )
@@ -203,8 +204,8 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     -- Temporarily Disabled
     --[[local dist = mdist( state[ 'me' ][ 'body' ][ 'data' ][1], { x = center_x, y = center_y } )
     score = score - (dist * 100)
-    -- log( DEBUG, string.format('Center distance %s, score %s', dist, dist*100 ) )]]
-   
+
+    log( DEBUG, string.format('Center distance %s, score %s', dist, dist*100 ) )]]
  
     -- log( DEBUG, 'Original score: ' .. score )
     -- log( DEBUG, 'Percent accessible: ' .. percent_accessible )
@@ -294,8 +295,8 @@ function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMo
         
         -- short circuit win/loss conditions
         #moves == 0 or
-        state[ 'me' ][ 'health' ] <= 0 or
-        state[ 'enemy' ][ 'health' ] <= 0 or
+        state[ 'me' ][ 'health' ] < 0 or
+        state[ 'enemy' ][ 'health' ] < 0 or
         (
             state[ 'me' ][ 'body' ][ 'data' ][1][ 'x' ] == state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'x' ]
             and state[ 'me' ][ 'body' ][ 'data' ][1][ 'y' ] == state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'y' ]

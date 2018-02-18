@@ -73,37 +73,21 @@ function util.buildWorldMap( gameState, log_id )
     
     -- Place living snakes
     for i = 1, #gameState[ 'snakes' ][ 'data' ] do
-        if gameState[ 'snakes' ][ 'data' ][i][ 'health' ] > 0 then
-            local length = #gameState[ 'snakes' ][ 'data' ][i][ 'body' ][ 'data' ]
-            local whoami = gameState[ 'snakes' ][ 'data' ][i][ 'id' ]
-
-            for j = 1, length do
-                local snake = gameState[ 'snakes' ][ 'data' ][i][ 'body' ][ 'data' ][j]
-                local health = gameState[ 'snakes' ][ 'data' ][i][ 'health' ]
-                local log_msg = { health = health, game_id = log_id, who = whoami, turn = gameState[ 'turn' ], length = length, coordinates = { x = snake[ 'x' ], y = snake[ 'y' ] } }
-
-                if j == 1 then
-                    grid[ snake[ 'y' ] ][ snake[ 'x' ] ] = '@'
-                    -- msg = { who = whoami, item = "head", coordinates = { x = snake[ 'x' ], y = snake[ 'y' ] } }
-                    log_msg.item = "head"
-                    log("info." .. log_id, log_msg)
-                elseif j == length then
-                    if grid[ snake[ 'y' ] ][ snake[ 'x' ] ] ~= '@' and grid[ snake[ 'y' ] ][ snake[ 'x' ] ] ~= '#' then
-                        grid[ snake[ 'y' ] ][ snake[ 'x' ] ] = '*'
-                    end
-
-                    -- msg = { who = whoami, item = "tail", coordinates = { x = snake[ 'x' ], y = snake[ 'y' ] } }
-                    log_msg.item = "tail"
-                    log("info." .. log_id, log_msg)
-                else
-                    if grid[ snake[ 'y' ] ][ snake[ 'x' ] ] ~= '@' then
-                        grid[ snake[ 'y' ] ][ snake[ 'x' ] ] = '#'
-                    end
-
-                    log_msg.item = "body"
-                    --msg = { who = whoami, item = "body", coordinates = { x = snake[ 'x' ], y = snake[ 'y' ] } }
-                    log("info." .. log_id, log_msg)
+        local length = #gameState[ 'snakes' ][ 'data' ][i][ 'body' ][ 'data' ]
+        for j = 1, length do
+            local snake = gameState[ 'snakes' ][ 'data' ][i][ 'body' ][ 'data' ][j]
+            if j == 1 then
+                grid[ snake[ 'y' ] ][ snake[ 'x' ] ] = '@'
+                log( DEBUG, string.format( 'Placed snake head at [%s, %s]', snake[ 'x' ], snake[ 'y' ] ) )
+            elseif j == length then
+                if grid[ snake[ 'y' ] ][ snake[ 'x' ] ] ~= '@' and grid[ snake[ 'y' ] ][ snake[ 'x' ] ] ~= '#' then
+                    grid[ snake[ 'y' ] ][ snake[ 'x' ] ] = '*'
                 end
+            else
+                if grid[ snake[ 'y' ] ][ snake[ 'x' ] ] ~= '@' then
+                    grid[ snake[ 'y' ] ][ snake[ 'x' ] ] = '#'
+                end
+                log( DEBUG, string.format( 'Placed snake tail at [%s, %s]', snake[ 'x' ], snake[ 'y' ] ) )
             end
         end
     end
