@@ -24,9 +24,6 @@ local mdist = util.mdist
 local neighbours = algorithm.neighbours
 local now = ngx.now
 local update_time = ngx.update_time
-
--- Lua socket logger
--- local logger = require "logger"
 local log = logger.log
 
 -- Redis cache layer for logging
@@ -144,7 +141,6 @@ local myState = {
     enemy = enemy
 }
 
-ngx.log(ngx.DEBUG, log_id)
 -- Alpha-Beta Pruning algorithm
 -- This is significantly faster than minimax on a single processor, but very challenging to parallelize
 local bestScore, bestMove = algorithm.alphabeta( grid, myState, 0, -math.huge, math.huge, nil, nil, true, {}, {}, log_id )

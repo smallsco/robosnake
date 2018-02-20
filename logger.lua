@@ -53,5 +53,3 @@ function logger.log( subtag, message_string )
 end
 
 return logger
-
-

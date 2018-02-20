@@ -202,12 +202,13 @@ def transform(data_list):
   '''
   
   # TODO : I need game board width & height
-  # right now, assume 10
   
   turns = []
 
   for str_data in data_list:
     data = json.loads(str_data)
+
+    print('>>>>>>>>> ', turns)
 
     # protect against log mistakes
     if isinstance(data, unicode):
@@ -220,8 +221,8 @@ def transform(data_list):
     if len(turns) <= turn:
       entry = {
         'turn': turn,
-        'height': 10,
-        'width': 10,
+        'height': 10, # TODO
+        'width': 10, # TODO
         'snakes': { 'data': [] },
         'food': { 'data': [] }
       }
@@ -230,7 +231,7 @@ def transform(data_list):
 
     if what == 'food':
       c = data['coordinates']
-      turns[turn]['food']['data'].append({'x': c['x'], 'y': c['y']})
+      turns[turn]['food']['data'].append( {'x': c['x'], 'y': c['y'] } )
 
     elif what == 'head' or what == 'tail' or what == 'body':
       c = data['coordinates']
@@ -349,8 +350,6 @@ def generate_printable_board(game_data, robosnake_id):
 
 def render_turn_and_data(game_data, game_board, turn):
   health_string = '\n'
-  
-  print(len(game_data), turn)
 
   for snake in game_data[turn]['snakes']['data']:
     health_string += 'Snake: {}\tHealth: {}\n'.format(snake['id'], snake['health'])

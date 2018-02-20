@@ -2,11 +2,7 @@ local util = {}
 
 -- Lua optimization: any functions from another module called more than once
 -- are faster if you create a local reference to that function.
-
--- I get the following error when I try this:
--- " attempt to index global 'logger' (a nil value) "
--- local log = logger.log
-
+local log = logger.log
 local random = math.random
 
 --[[
@@ -55,7 +51,7 @@ end
 function util.buildWorldMap( gameState, log_id )
 
     local INFO = "info." .. log_id
-    local DEBUG = "info" .. log_id
+    local DEBUG = "debug." .. log_id
 
     -- Generate the tile grid
     local grid = {}
@@ -72,7 +68,7 @@ function util.buildWorldMap( gameState, log_id )
         grid[ food[ 'y' ] ][ food[ 'x' ] ] = 'O'
 
         food_log = { game_id = log_id, turn = gameState[ 'turn' ], who = "game", item = "food", coordinates = { x = food[ 'x' ], y = food[ 'y' ] } }
-        logger.log(INFO , food_log )
+        log(INFO , food_log )
     end
     
     -- Place living snakes
@@ -89,23 +85,23 @@ function util.buildWorldMap( gameState, log_id )
                 grid[ snake[ 'y' ] ][ snake[ 'x' ] ] = '@'
 
                 snake_log.item = "head"
-                logger.log(INFO, snake_log)
-                logger.log(DEBUG, string.format( 'Placed snake head at [%s, %s]', snake[ 'x' ], snake[ 'y' ] ) )
+                log(INFO, snake_log)
+                log(DEBUG, string.format( 'Placed snake head at [%s, %s]', snake[ 'x' ], snake[ 'y' ] ) )
             elseif j == length then
                 if grid[ snake[ 'y' ] ][ snake[ 'x' ] ] ~= '@' and grid[ snake[ 'y' ] ][ snake[ 'x' ] ] ~= '#' then
                     grid[ snake[ 'y' ] ][ snake[ 'x' ] ] = '*'
                 end
 
                 snake_log.item = "tail"
-                logger.log(INFO, snake_log)
+                log(INFO, snake_log)
             else
                 if grid[ snake[ 'y' ] ][ snake[ 'x' ] ] ~= '@' then
                     grid[ snake[ 'y' ] ][ snake[ 'x' ] ] = '#'
                 end
 
                 snake_log.item = "body"
-                logger.log(INFO, snake_log)
-                logger.log(DEBUG, string.format( 'Placed snake tail at [%s, %s]', snake[ 'x' ], snake[ 'y' ] ) )
+                log(INFO, snake_log)
+                log(DEBUG, string.format( 'Placed snake tail at [%s, %s]', snake[ 'x' ], snake[ 'y' ] ) )
             end
         end
     end
