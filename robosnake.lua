@@ -26,19 +26,18 @@ local now = ngx.now
 local update_time = ngx.update_time
 
 -- Lua socket logger
-local logger = require "logger"
+-- local logger = require "logger"
 local log = logger.log
 
 -- Redis cache layer for logging
-local redis = require "resty.redis"
-local red = redis:new()
-
-red:set_timeout(1000) -- 1 sec
-
-local ok, err = red:connect("127.0.0.1", 6379)
-if not ok then
-    ngx.say("failed to connect: ", err)
-end
+-- TODO
+-- local redis = require "resty.redis"
+-- local red = redis:new()
+-- red:set_timeout(1000) -- 1 sec
+-- local ok, err = red:connect("127.0.0.1", 6379)
+-- if not ok then
+    -- ngx.say("failed to connect: ", err)
+-- end
 
 
 --[[
@@ -63,16 +62,16 @@ local gameState = cjson.decode( request_body )
     is written to the cache, and retrieved based on game and snake ids.
 --]]
 
-local game_start_time = ngx.now()
+local game_start_time = ngx.ctx.startTime
 
 if gameState[ 'turn' ] == 0 then
     local redkey = "" .. gameState[ 'id' ] .. ":" .. gameState[ 'you' ][ 'id' ]
-    red:set(redkey, game_start_time)
+    ngx.shared.game_keys:set(redkey, game_start_time)
 
     log("replay_key", { log_id = "" .. gameState[ 'id' ] .. ":" .. gameState[ 'you' ][ 'id' ] .. ":" .. game_start_time } )
 else
-    local redkey = "" .. gameState[ 'id' ] .. ":" .. gameState[ 'you' ][ 'id' ]
-    game_start_time = red:get(redkey)
+    local key = "" .. gameState[ 'id' ] .. ":" .. gameState[ 'you' ][ 'id' ]
+    game_start_time = ngx.shared.game_keys:get(key)
 end
 
 local log_id = "" .. gameState[ 'id' ] .. ":" .. gameState[ 'you' ][ 'id' ] .. ":" .. game_start_time
@@ -174,7 +173,7 @@ if not bestMove then
     else
         -- We're _larger_ than the enemy, or we're smaller but there are no safe squares
         -- available - we may end up in a head-on-head collision.
-        log(DEBUG, "Moving to random free neighbor")
+        log(DEBUG, "Moving to random free neighbour")
     end
     
     if #my_moves > 0 then
@@ -194,7 +193,7 @@ end
 -- We're dead. This only exists to ensure that we always return a valid JSON response
 -- to the game board. It always goes left.
 if not bestMove then
-    log(DEBUG, "FATAL: Wall collision unavoiable. Moving left!")
+    log(DEBUG, "FATAL: Wall collision unavoidable. Moving left!")
     bestMove = { x = me[ 'body' ][ 'data' ][1][ 'x' ] - 1, y = me[ 'body' ][ 'data' ][1][ 'y' ] }
 end
 
@@ -216,7 +215,7 @@ respTime = endTime - ngx.ctx.startTime
 -- then do the garbage collection in the worker process before handling the next request
 local ok, err = ngx.eof()
 if not ok then
-    ngx.log(ngx.err, "Could not complete ngx EOF function\t" .. err)
+    ngx.log(ngx.ERR, "Could not complete ngx EOF function\t" .. err)
 end
 collectgarbage()
 collectgarbage()

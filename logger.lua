@@ -1,3 +1,5 @@
+local logger = {}
+
 --[[
     Logger Module
 
@@ -13,23 +15,15 @@
       debug : Human-friendly statements of robosnake & algorithm
 --]]
 
-local lualog = {}
-
--- Easy access logger configuration
-local SOCKET_HOST = "127.0.0.1"
-local SOCKET_PORT = 24224
-local SOCKET_TYPE = "tcp"
-
-local json = require "json"
-local logger = require "resty.logger.socket"
+local restylog = require ("resty.logger.socket")
 
 --[[
     PUBLIC METHODS
 --]]
 
-function lualog.connect()
-  if not logger.initted() then
-    local ok, err = logger.init{
+function logger.connect()
+  if not restylog.initted() then
+    local ok, err = restylog.init{
       sock_type = SOCKET_TYPE,
       host = SOCKET_HOST,
       port = SOCKET_PORT,
@@ -44,20 +38,20 @@ function lualog.connect()
   end
 end
 
-function lualog.log( subtag, message_string )
-  lualog.connect()
+function logger.log( subtag, message_string )
+  logger.connect()
 
   tag = "luasnake." .. subtag
   time = ngx.now()
-  msg = json.encode({ tag, time, message_string } )
+  msg = cjson.encode({ tag, time, message_string } )
 
-  local bytes, err = logger.log(msg)
+  local bytes, err = restylog.log(msg)
   if err then
     ngx.log(ngx.ERR, "Failed to log message\t", err, "\tmessage:\t", msg)
     return
   end
 end
 
-return lualog
+return logger
 
 
