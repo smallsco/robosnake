@@ -15,7 +15,8 @@ local logger = {}
       debug : Human-friendly statements of robosnake & algorithm
 --]]
 
-local restylog = require ("resty.logger.socket")
+-- local restylog = require ("resty.logger.socket")
+local restylog = require( "restyloggersocket" )
 
 --[[
     PUBLIC METHODS
