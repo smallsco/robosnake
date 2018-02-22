@@ -1,12 +1,10 @@
 '''
 Prompts user for game replay choice.
 Searches logs for data and generates
-play-by-play ASCII table.
+play-by-play CLI table.
 
 TODOs:
   * Get snake death rattle / winner
-  * Get board width, height
-  * Get snake health
 '''
 import json
 import glob
@@ -63,12 +61,6 @@ def get_replay_keys():
   return options
 
 
-def search_line(line, key):
-  '''
-  Check if file line is regex match to key
-  '''
-  pass
-
 
 def process_wrapper(filename, key, chunkStart, chunkSize):
   '''
@@ -117,7 +109,7 @@ def process_wrapper(filename, key, chunkStart, chunkSize):
 
 def chunkify(fname,size=1024*1024):
   '''
-  Describe!
+  Break input files into workable chunks
   '''
   fileEnd = os.path.getsize(fname)
   with open(fname,'r') as f:
@@ -165,15 +157,20 @@ def search_log_files(key):
 
   for job in jobs:
     result = job.get()
-    payloads.append(result)
+    if result:
+      for r in result:
+          payloads.append(r)
 
-  # cleanup
   pool.close()
 
-  # Return flattend list of payloads
-  results = [ item for items in payloads for item in items]
-
-  return results
+  # search for highest turn
+  highest_turn = 0
+  for pay in payloads:
+    value = json.loads(pay)['turn']    
+    if value > highest_turn:
+      highest_turn = value
+    
+  return payloads, highest_turn
 
   
 def get_user_input(option_list):
@@ -195,22 +192,18 @@ def get_user_input(option_list):
   return option_list[choice]
 
 
-def transform(data_list):
+def transform(data_list, max_turn):
   '''
   Transform a list of payloads into turn-based data structures
   the printer can parse
   '''
-  
-  # TODO : I need game board width & height
-  
-  turns = []
+
+  turns = [None] * ( max_turn + 1 )
 
   for str_data in data_list:
     data = json.loads(str_data)
 
-    print('>>>>>>>>> ', turns)
-
-    # protect against log mistakes
+    # protect against log mistakes (pure strings)
     if isinstance(data, unicode):
       continue
 
@@ -218,16 +211,14 @@ def transform(data_list):
     what = data.get('item')
     turn = data.get('turn')
 
-    if len(turns) <= turn:
-      entry = {
+    if turns[turn] is None:
+      turns[turn] = {
         'turn': turn,
-        'height': 10, # TODO
-        'width': 10, # TODO
+        'height': data.get('height'),
+        'width': data.get('width'),
         'snakes': { 'data': [] },
         'food': { 'data': [] }
       }
-
-      turns.append(entry)
 
     if what == 'food':
       c = data['coordinates']
@@ -236,7 +227,7 @@ def transform(data_list):
     elif what == 'head' or what == 'tail' or what == 'body':
       c = data['coordinates']
       id = who
-
+      
       # see if we already have snake data
       snake = filter(lambda snake: snake['id'] == who, turns[turn]['snakes']['data'])
 
@@ -248,8 +239,9 @@ def transform(data_list):
             'x': c['x'],
             'y': c['y']
           }],
-          'length': 99, # TODO
-          'health': 99  # TODO
+          'length': data['length'],
+          'health': data['health'],
+          'name': data.get('name')
         }
 
         turns[turn]['snakes']['data'].append(data)
@@ -257,27 +249,25 @@ def transform(data_list):
       else:
           snake[0]['data'].append({'object': what, 'x': c['x'], 'y': c['y']})
 
-      # TODO : ADD DEATH RATTLE
-
   return turns
 
 
 def search_and_return_log_data():
   '''
   Grabs relevant data from logfiles and returns per-turn data objects
-  ready for ASCII printing
+  ready for pretty printing
   '''
   options = get_replay_keys()
 
   key = get_user_input(options)
 
-  payloads = search_log_files(key)
+  payloads, max_turn = search_log_files(key)
 
   if len(payloads) == 0:
     raise Exception('FATAL: No log data found')
 
-  # return robosnake id  
-  return transform(payloads), key[1]
+  # return payloads, our robosnake id  
+  return transform(payloads, max_turn), key[2], max_turn
 
 
 def generate_printable_board(game_data, robosnake_id):
@@ -286,8 +276,6 @@ def generate_printable_board(game_data, robosnake_id):
   between turns.
   @param game_data JSON : list of turns
   """
-
-  ## Unicode Printables Declarations ##
 
   snake_bodies = {
     # 'at', asterisk
@@ -306,8 +294,11 @@ def generate_printable_board(game_data, robosnake_id):
   game_board_per_turn = []
 
   for turn in game_data:
-    board_width = turn['width'] # + 1 # TODO : FIX
-    board_height = turn['height'] # + 1 # TODO : FIX
+    if turn is None:
+      continue
+
+    board_width = turn['width']
+    board_height = turn['height']
 
     turn_index = turn['turn']
 
@@ -352,7 +343,11 @@ def render_turn_and_data(game_data, game_board, turn):
   health_string = '\n'
 
   for snake in game_data[turn]['snakes']['data']:
-    health_string += 'Snake: {}\tHealth: {}\n'.format(snake['id'], snake['health'])
+     snake_identifier = snake['id']
+     if snake.get('name'):
+         snake_identifier = snake['name']
+
+     health_string += 'Snake: {}\tHealth: {}\tLength: {}\n'.format(snake_identifier, snake['health'], snake['length'])
 
   print('\nTurn {}\n'.format(turn))
 
@@ -360,11 +355,22 @@ def render_turn_and_data(game_data, game_board, turn):
   
   print(health_string)
 
-def render_game_replay(game_data, robosnake_id):
+def render_game_replay(game_data, robosnake_id, highest_turn):
   game_board = generate_printable_board(game_data, robosnake_id)
 
-  print('\n\nROBOSNAKE | INSTANT REPLAY\n\nEnter 2 for NEXT turn, 1 for PREVIOUS, any other number to EXIT.')  
-  print('(This match played {} turns.)'.format(len(game_data)))
+  header_string = (
+      "\n----------------------------------"
+      "\nROBOSNAKE | INSTANT REPLAY\n\nOPTIONS "
+      "\n\t[1]\tPrevious move"
+      "\n\t[2]\tNEXT move"
+      "\n\t[5]\tJump 5 moves"
+      "\n\t[7]\tLast 7 moves"
+      "\n\tAny other number to exit."
+      "\n\n-- This match played {} turns. --"
+      "\n---------------------------------"
+  ).format( highest_turn )
+
+  print(header_string)
 
   turn = 0
   render_turn_and_data(game_data, game_board, turn)
@@ -382,6 +388,15 @@ def render_game_replay(game_data, robosnake_id):
           print('There are no older moves to show.')
           continue
         turn -= 1
+    elif choice == 7:
+        turn = len(game_data) - 7
+    elif choice == 5:
+        remainder = len(game_data) - 5
+        if remainder - 5 > 0:
+          turn += 5
+        else:
+          # jump to last turn
+          turn = len(game_data)-1
     else:
       sys.exit(0)
 
@@ -390,9 +405,9 @@ def render_game_replay(game_data, robosnake_id):
 
 def main():
   # Returns turn-index JSON game data, and OUR snake id
-  game_data, robosnake_id = search_and_return_log_data()
+  game_data, robosnake_id, highest_turn = search_and_return_log_data()
 
-  render_game_replay(game_data, robosnake_id)
+  render_game_replay(game_data, robosnake_id, highest_turn)
 
 
 if __name__ == '__main__':

@@ -67,26 +67,47 @@ function util.buildWorldMap( gameState, log_id )
         local food = gameState[ 'food' ][ 'data' ][i]
         grid[ food[ 'y' ] ][ food[ 'x' ] ] = 'O'
 
-        food_log = { game_id = log_id, turn = gameState[ 'turn' ], who = "game", item = "food", coordinates = { x = food[ 'x' ], y = food[ 'y' ] } }
-        log(INFO , food_log )
+        food_log = {
+            game_id = log_id,
+            width = gameState['width'],
+            height = gameState[ 'height'],
+            turn = gameState[ 'turn' ],
+            who = "game",
+            item = "food",
+            coordinates = { x = food[ 'x' ], y = food[ 'y' ] }
+        }
+
+        log( INFO , food_log )
     end
     
     -- Place living snakes
     for i = 1, #gameState[ 'snakes' ][ 'data' ] do
         local length = #gameState[ 'snakes' ][ 'data' ][i][ 'body' ][ 'data' ]
         local whoami = gameState[ 'snakes' ][ 'data' ][i][ 'id' ]
+        local name = gameState[ 'snakes' ][ 'data' ][i][ 'name' ]
 
         for j = 1, length do
             local snake = gameState[ 'snakes' ][ 'data' ][i][ 'body' ][ 'data' ][j]
             local health = gameState[ 'snakes' ][ 'data' ][i][ 'health' ]
-            local snake_log = { health = health, game_id = log_id, who = whoami, turn = gameState[ 'turn' ], length = length, coordinates = { x = snake[ 'x' ], y = snake[ 'y' ] } }
+            
+            local snake_log = {
+                health = health,
+                game_id = log_id,
+                who = whoami,
+                name = name,
+                width = gameState['width'],
+                height = gameState[ 'height'],
+                turn = gameState[ 'turn' ],
+                length = length,
+                coordinates = { x = snake[ 'x' ], y = snake[ 'y' ] }
+             }
 
             if j == 1 then
                 grid[ snake[ 'y' ] ][ snake[ 'x' ] ] = '@'
 
                 snake_log.item = "head"
-                log(INFO, snake_log)
-                log(DEBUG, string.format( 'Placed snake head at [%s, %s]', snake[ 'x' ], snake[ 'y' ] ) )
+                log( INFO, snake_log )
+                log( DEBUG, string.format( 'Placed snake head at [%s, %s]', snake[ 'x' ], snake[ 'y' ] ) )
             elseif j == length then
                 if grid[ snake[ 'y' ] ][ snake[ 'x' ] ] ~= '@' and grid[ snake[ 'y' ] ][ snake[ 'x' ] ] ~= '#' then
                     grid[ snake[ 'y' ] ][ snake[ 'x' ] ] = '*'
@@ -160,8 +181,9 @@ end
 
 --- Prints the grid as an ASCII representation of the world map
 -- @param grid The game grid
+-- @deprecated. Should be safe to remove, but let's keep incase
+-- everything goes horribly horribly wrong.
 function util.printWorldMap( grid )
-   -- [deprecated] See new logging / replay module    
     return
 
     --[[
@@ -176,7 +198,7 @@ function util.printWorldMap( grid )
     end
 
     ngx.log( ngx.DEBUG, str )
-    --]]
+    ]]--
 end
 
 
