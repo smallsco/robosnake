@@ -173,13 +173,10 @@ local function heuristic( grid, state, my_moves, enemy_moves, log_id )
         end
     end
     
-    local center_x = math.ceil( #grid[1] / 2 )
-    local center_y = math.ceil( #grid / 2 )
-    
     -- If there's food on the board, and I'm hungry, go for it
     -- If I'm not hungry, ignore it
     local foodWeight = 0
-    if state[ 'me' ][ 'health' ] <= HUNGER_HEALTH then
+    if state[ 'me' ][ 'health' ] <= HUNGER_HEALTH or #state[ 'me' ][ 'body' ][ 'data' ] < 4 then
         foodWeight = 100 - state[ 'me' ][ 'health' ]
     end
     log( DEBUG, 'Food Weight: ' .. foodWeight )
@@ -189,21 +186,40 @@ local function heuristic( grid, state, my_moves, enemy_moves, log_id )
             -- "i" is used in the score so that two pieces of food that 
             -- are equal distance from me do not have identical weighting
             score = score - ( dist * foodWeight ) - i
-            log( DEBUG, string.format('Food %s, distance %s, score %s', inspect( food[i] ), dist, ( dist * foodWeight ) - i ) )
+            log( DEBUG, string.format( 'Food %s, distance %s, score %s', inspect( food[i] ), dist, ( dist * foodWeight ) - i ) )
         end
     end
 
     -- Hang out near the enemy's head
     local kill_squares = algorithm.neighbours( state[ 'enemy' ][ 'body' ][ 'data' ][1], grid )
+    local enemy_last_direction = util.direction( state[ 'enemy' ][ 'body' ][ 'data' ][2], state[ 'enemy' ][ 'body' ][ 'data' ][1] )
     for i = 1, #kill_squares do
         local dist = mdist( state[ 'me' ][ 'body' ][ 'data' ][1], kill_squares[i] )
-        score = score - (dist * 100)
-        log( DEBUG, string.format('Kill square distance %s, score %s', dist, dist*100 ) )
+        local direction = util.direction( state[ 'enemy' ][ 'body' ][ 'data' ][1], kill_squares[i] )
+        if direction == enemy_last_direction then
+            score = score - ( dist * 200 )
+            log( DEBUG, string.format( 'Prime head target %s, distance %s, score %s', inspect( kill_squares[i] ), dist, dist * 200 ) )
+        else
+            score = score - ( dist * 100 )
+            log( DEBUG, string.format( 'Head target %s, distance %s, score %s', inspect( kill_squares[i] ), dist, dist * 100 ) )
+        end
+    end
+    
+    -- Avoid the edge of the game board
+    if
+        state[ 'me' ][ 'body' ][ 'data' ][1][ 'x' ] == 1
+        or state[ 'me' ][ 'body' ][ 'data' ][1][ 'x' ] == #grid[1]
+        or state[ 'me' ][ 'body' ][ 'data' ][1][ 'y' ] == 1
+        or state[ 'me' ][ 'body' ][ 'data' ][1][ 'y' ] == #grid
+    then
+        score = score - 25000
     end
      
     -- Hang out near the center
     -- Temporarily Disabled
-    --[[local dist = mdist( state[ 'me' ][ 'body' ][ 'data' ][1], { x = center_x, y = center_y } )
+    --[[local center_x = math.ceil( #grid[1] / 2 )
+    local center_y = math.ceil( #grid / 2 )
+    local dist = mdist( state[ 'me' ][ 'body' ][ 'data' ][1], { x = center_x, y = center_y } )
     score = score - (dist * 100)
 
     log( DEBUG, string.format('Center distance %s, score %s', dist, dist*100 ) )]]
