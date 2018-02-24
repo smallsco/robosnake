@@ -78,9 +78,9 @@ end
 -- @param state The game state
 -- @param my_moves Table containing my possible moves
 -- @param enemy_moves Table containing enemy's possible moves
-local function heuristic( grid, state, my_moves, enemy_moves, log_id )
-    local DEBUG = "debug." .. log_id
-    local INFO = "info." .. log_id
+local function heuristic( grid, state, my_moves, enemy_moves )
+    local DEBUG = "debug." .. ngx.ctx.log_id
+    local INFO = "info." .. ngx.ctx.log_id
 
 
     -- Default board score
@@ -288,9 +288,9 @@ end
 -- @param alphaMove The best move at the current depth
 -- @param betaMove The worst move at the current depth
 -- @param maximizingPlayer True if calculating alpha at this depth, false if calculating beta
-function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMove, maximizingPlayer, prev_grid, prev_enemy_moves, log_id)
-    local DEBUG = "debug." .. log_id
-    local INFO = "info." .. log_id
+function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMove, maximizingPlayer, prev_grid, prev_enemy_moves )
+    local DEBUG = "debug." .. ngx.ctx.log_id
+    local INFO = "info." .. ngx.ctx.log_id
 
     log(DEBUG, 'Depth: ' .. depth )
 
@@ -322,7 +322,7 @@ function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMo
         )
     then
         log( DEBUG, 'Reached MAX_RECURSION_DEPTH or endgame state.' )
-        return heuristic( grid, state, my_moves, enemy_moves, log_id )
+        return heuristic( grid, state, my_moves, enemy_moves )
     end
   
     if maximizingPlayer then
@@ -399,7 +399,7 @@ function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMo
             
             printWorldMap( new_grid )
             
-            local newAlpha = algorithm.alphabeta( new_grid, new_state, depth + 1, alpha, beta, alphaMove, betaMove, false, grid, enemy_moves, log_id )
+            local newAlpha = algorithm.alphabeta( new_grid, new_state, depth + 1, alpha, beta, alphaMove, betaMove, false, grid, enemy_moves )
             if newAlpha > alpha then
                 alpha = newAlpha
                 alphaMove = moves[i]
@@ -480,7 +480,7 @@ function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMo
             
             printWorldMap( new_grid )
             
-            local newBeta = algorithm.alphabeta( new_grid, new_state, depth + 1, alpha, beta, alphaMove, betaMove, true, {}, {}, log_id )
+            local newBeta = algorithm.alphabeta( new_grid, new_state, depth + 1, alpha, beta, alphaMove, betaMove, true, {}, {} )
             if newBeta < beta then
                 beta = newBeta
                 betaMove = moves[i]

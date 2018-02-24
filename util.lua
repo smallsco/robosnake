@@ -48,10 +48,10 @@ end
 --- Take the BattleSnake arena's state JSON and use it to create our own grid
 -- @param gameState The arena's game state JSON
 -- @return A 2D table with each cell mapped to food, snakes, etc.
-function util.buildWorldMap( gameState, log_id )
+function util.buildWorldMap( gameState )
 
-    local INFO = "info." .. log_id
-    local DEBUG = "debug." .. log_id
+    local INFO = "info." .. ngx.ctx.log_id
+    local DEBUG = "debug." .. ngx.ctx.log_id
 
     -- Generate the tile grid
     local grid = {}
@@ -68,7 +68,7 @@ function util.buildWorldMap( gameState, log_id )
         grid[ food[ 'y' ] ][ food[ 'x' ] ] = 'O'
 
         food_log = {
-            game_id = log_id,
+            game_id = ngx.ctx.log_id,
             width = gameState['width'],
             height = gameState[ 'height'],
             turn = gameState[ 'turn' ],
@@ -92,7 +92,7 @@ function util.buildWorldMap( gameState, log_id )
             
             local snake_log = {
                 health = health,
-                game_id = log_id,
+                game_id = ngx.ctx.log_id,
                 who = whoami,
                 name = name,
                 width = gameState['width'],

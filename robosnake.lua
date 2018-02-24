@@ -59,14 +59,14 @@ else
     game_start_time = ngx.shared.game_keys:get(cache_key)
 end
 
-local log_id = cache_key .. ":" .. game_start_time
+ngx.ctx.log_id = cache_key .. ":" .. game_start_time
 
 -- Logging tags
 -- INFO for parseable data. DEBUG for human-friendly.
-local INFO = "info." .. log_id
-local DEBUG = "debug." .. log_id
+local INFO = "info." .. ngx.ctx.log_id
+local DEBUG = "debug." .. ngx.ctx.log_id
 
-log( INFO, { turn = gameState[ 'turn' ], who = "game", game_id = log_id, width = gameState[ 'width' ], height = gameState[ 'height' ] } )
+log( INFO, { turn = gameState[ 'turn' ], who = "game", game_id = ngx.ctx.log_id, width = gameState[ 'width' ], height = gameState[ 'height' ] } )
 
 -- Convert to 1-based indexing
 for i = 1, #gameState[ 'food' ][ 'data' ] do
@@ -84,7 +84,7 @@ for i = 1, #gameState[ 'you' ][ 'body' ][ 'data' ] do
     gameState[ 'you' ][ 'body' ][ 'data' ][i][ 'y' ] = gameState[ 'you' ][ 'body' ][ 'data' ][i][ 'y' ] + 1
 end
 
-local grid = util.buildWorldMap( gameState, log_id )
+local grid = util.buildWorldMap( gameState )
 
 -- print to local NGX
 -- util.printWorldMap( grid )
@@ -131,7 +131,7 @@ local myState = {
 
 -- Alpha-Beta Pruning algorithm
 -- This is significantly faster than minimax on a single processor, but very challenging to parallelize
-local bestScore, bestMove = algorithm.alphabeta( grid, myState, 0, -math.huge, math.huge, nil, nil, true, {}, {}, log_id )
+local bestScore, bestMove = algorithm.alphabeta( grid, myState, 0, -math.huge, math.huge, nil, nil, true, {}, {} )
 
 log( DEBUG, string.format( 'Best score: %s\tBest move: %s', bestScore, inspect( bestMove ) ) )
 
