@@ -157,7 +157,7 @@ log( DEBUG, string.format( 'Decision: Moving %s to [%s,%s]', dir, bestMove[ 'x' 
 
 
 -- Return response to the arena
-local response = { move = dir }
+local response = { move = dir, taunt = util.bieberQuote() }
 ngx.print( cjson.encode(response) )
 
 
