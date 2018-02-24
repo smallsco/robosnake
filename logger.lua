@@ -40,8 +40,6 @@ function logger.connect()
 end
 
 function logger.log( subtag, message_string )
-  logger.connect()
-
   tag = "luasnake." .. subtag
   time = ngx.now()
   msg = cjson.encode({ tag, time, message_string } )

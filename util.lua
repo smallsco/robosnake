@@ -67,7 +67,7 @@ function util.buildWorldMap( gameState )
         local food = gameState[ 'food' ][ 'data' ][i]
         grid[ food[ 'y' ] ][ food[ 'x' ] ] = 'O'
 
-        food_log = {
+        local food_log = {
             game_id = ngx.ctx.log_id,
             width = gameState['width'],
             height = gameState[ 'height'],
