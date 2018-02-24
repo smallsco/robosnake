@@ -42,18 +42,18 @@ local gameState = cjson.decode( request_body )
 -- Convert to 1-based indexing
 log( DEBUG, 'Converting Coordinates' )
 for i = 1, #gameState[ 'food' ][ 'data' ] do
-    gameState[ 'food' ][ 'data' ][i][ 'x' ] = gameState[ 'food' ][ 'data' ][i][ 'x' ] + 1
-    gameState[ 'food' ][ 'data' ][i][ 'y' ] = gameState[ 'food' ][ 'data' ][i][ 'y' ] + 1
+    gameState[ 'food' ][ 'data' ][ i ][ 'x' ] = gameState[ 'food' ][ 'data' ][ i ][ 'x' ] + 1
+    gameState[ 'food' ][ 'data' ][ i ][ 'y' ] = gameState[ 'food' ][ 'data' ][ i ][ 'y' ] + 1
 end
 for i = 1, #gameState[ 'snakes' ][ 'data' ] do
-    for j = 1, #gameState[ 'snakes' ][ 'data' ][i][ 'body' ][ 'data' ] do
-        gameState[ 'snakes' ][ 'data' ][i][ 'body' ][ 'data' ][j][ 'x' ] = gameState[ 'snakes' ][ 'data' ][i][ 'body' ][ 'data' ][j][ 'x' ] + 1
-        gameState[ 'snakes' ][ 'data' ][i][ 'body' ][ 'data' ][j][ 'y' ] = gameState[ 'snakes' ][ 'data' ][i][ 'body' ][ 'data' ][j][ 'y' ] + 1
+    for j = 1, #gameState[ 'snakes' ][ 'data' ][ i ][ 'body' ][ 'data' ] do
+        gameState[ 'snakes' ][ 'data' ][ i ][ 'body' ][ 'data' ][ j ][ 'x' ] = gameState[ 'snakes' ][ 'data' ][ i ][ 'body' ][ 'data' ][ j ][ 'x' ] + 1
+        gameState[ 'snakes' ][ 'data' ][ i ][ 'body' ][ 'data' ][ j ][ 'y' ] = gameState[ 'snakes' ][ 'data' ][ i ][ 'body' ][ 'data' ][ j ][ 'y' ] + 1
     end
 end
 for i = 1, #gameState[ 'you' ][ 'body' ][ 'data' ] do
-    gameState[ 'you' ][ 'body' ][ 'data' ][i][ 'x' ] = gameState[ 'you' ][ 'body' ][ 'data' ][i][ 'x' ] + 1
-    gameState[ 'you' ][ 'body' ][ 'data' ][i][ 'y' ] = gameState[ 'you' ][ 'body' ][ 'data' ][i][ 'y' ] + 1
+    gameState[ 'you' ][ 'body' ][ 'data' ][ i ][ 'x' ] = gameState[ 'you' ][ 'body' ][ 'data' ][ i ][ 'x' ] + 1
+    gameState[ 'you' ][ 'body' ][ 'data' ][ i ][ 'y' ] = gameState[ 'you' ][ 'body' ][ 'data' ][ i ][ 'y' ] + 1
 end
 
 log( DEBUG, 'Building World Map' )
@@ -75,14 +75,14 @@ local me = gameState[ 'you' ]
 local enemy = nil
 local distance = 99999
 for i = 1, #gameState[ 'snakes' ][ 'data' ] do
-    if gameState[ 'snakes' ][ 'data' ][i][ 'id' ] ~= me[ 'id' ] then
+    if gameState[ 'snakes' ][ 'data' ][ i ][ 'id' ] ~= me[ 'id' ] then
         local d = mdist(
             me[ 'body' ][ 'data' ][1],
-            gameState[ 'snakes' ][ 'data' ][i][ 'body' ][ 'data' ][1]
+            gameState[ 'snakes' ][ 'data' ][ i ][ 'body' ][ 'data' ][1]
         )
         if d < distance then
             distance = d
-            enemy = gameState[ 'snakes' ][ 'data' ][i]
+            enemy = gameState[ 'snakes' ][ 'data' ][ i ]
         end
     end
 end
@@ -178,4 +178,4 @@ collectgarbage()
 
 update_time()
 totalTime = now() - ngx.ctx.startTime
-log(DEBUG, string.format('time to response: %.2f, total time: %.2f', respTime, totalTime))
+log( DEBUG, string.format( 'time to response: %.2f, total time: %.2f', respTime, totalTime ) )

@@ -13,13 +13,17 @@ local random = math.random
 ]]
 
 
+--- Recursively compares two variables for equality.
+-- @param mixed a The first var to compare
+-- @param mixed b The second var to compare
+-- @return boolean True if equal, False if not
 -- @see https://github.com/vadi2/mudlet-lua/blob/2630cbeefc3faef3079556cb06459d1f53b8f842/lua/Other.lua#L467
-local function _comp(a, b)
-    if type(a) ~= type(b) then return false end
-    if type(a) == 'table' then
-        for k, v in pairs(a) do
+local function _comp( a, b )
+    if type( a ) ~= type( b ) then return false end
+    if type( a ) == 'table' then
+        for k, v in pairs( a ) do
             if not b[k] then return false end
-            if not _comp(v, b[k]) then return false end
+            if not _comp( v, b[k] ) then return false end
         end
     else
         if a ~= b then return false end
@@ -45,7 +49,7 @@ function util.bieberQuote()
         "It's cool when fans spend so much time making things for me. It means a lot. -Justin Bieber",
         "No one can stop me. -Justin Bieber"
     }
-    return bieberquotes[random(#bieberquotes)]
+    return bieberquotes[ random( #bieberquotes ) ]
 end
 
 
@@ -58,9 +62,9 @@ function util.buildWorldMap( gameState )
     log( DEBUG, 'Generating tile grid' )
     local grid = {}
     for y = 1, gameState[ 'height' ] do
-        grid[y] = {}
+        grid[ y ] = {}
         for x = 1, gameState[ 'width' ] do
-            grid[y][x] = '.'
+            grid[ y ][ x ] = '.'
         end
     end
     
@@ -73,9 +77,9 @@ function util.buildWorldMap( gameState )
     
     -- Place living snakes
     for i = 1, #gameState[ 'snakes' ][ 'data' ] do
-        local length = #gameState[ 'snakes' ][ 'data' ][i][ 'body' ][ 'data' ]
+        local length = #gameState[ 'snakes' ][ 'data' ][ i ][ 'body' ][ 'data' ]
         for j = 1, length do
-            local snake = gameState[ 'snakes' ][ 'data' ][i][ 'body' ][ 'data' ][j]
+            local snake = gameState[ 'snakes' ][ 'data' ][ i ][ 'body' ][ 'data' ][ j ]
             if j == 1 then
                 grid[ snake[ 'y' ] ][ snake[ 'x' ] ] = '@'
                 log( DEBUG, string.format( 'Placed snake head at [%s, %s]', snake[ 'x' ], snake[ 'y' ] ) )
@@ -124,6 +128,10 @@ function util.mdist( src, dst )
 end
 
 
+--- Returns values of set1 that do not appear in set2
+-- @param table set1 A table with values that may need removing
+-- @param table set2 A table containing any values that need to be removed from set1
+-- @return table Returns values of set1 that do not appear in set2
 -- @see https://github.com/vadi2/mudlet-lua/blob/2630cbeefc3faef3079556cb06459d1f53b8f842/lua/TableUtils.lua#L332
 function util.n_complement( set1, set2 )
     if not set1 and set2 then return false end
@@ -149,8 +157,8 @@ end
 function util.printWorldMap( grid )
     local str = "\n"
     for y = 1, #grid do
-        for x = 1, #grid[y] do
-            str = str .. grid[y][x]
+        for x = 1, #grid[ y ] do
+            str = str .. grid[ y ][ x ]
         end
         if y < #grid then
             str = str .. "\n"

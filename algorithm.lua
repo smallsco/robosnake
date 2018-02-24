@@ -19,15 +19,15 @@ local printWorldMap = util.printWorldMap
 -- @param table orig The source table
 -- @return table The copy of the table
 -- @see http://lua-users.org/wiki/CopyTable
-local function deepcopy(orig)
-    local orig_type = type(orig)
+local function deepcopy( orig )
+    local orig_type = type( orig )
     local copy
     if orig_type == 'table' then
         copy = {}
         for orig_key, orig_value in next, orig, nil do
-            copy[deepcopy(orig_key)] = deepcopy(orig_value)
+            copy[ deepcopy( orig_key ) ] = deepcopy( orig_value )
         end
-        setmetatable(copy, deepcopy(getmetatable(orig)))
+        setmetatable( copy, deepcopy( getmetatable( orig ) ) )
     else -- number, string, boolean, etc
         copy = orig
     end
@@ -35,8 +35,8 @@ local function deepcopy(orig)
 end
 
 
---- Returns true if a square is safe to pass over, false otherwise
--- @param v The value of a particular tile on the grid
+--- Returns true if a square is safe to move into, false otherwise
+-- @param string v The value of a particular tile on the grid
 -- @param boolean failsafe If true, don't consider if the neighbour is safe or not
 -- @return boolean
 local function isSafeSquare( v, failsafe )
@@ -48,19 +48,22 @@ local function isSafeSquare( v, failsafe )
 end
 
 
---- Returns true if a square is safe to pass over, false otherwise
--- @param v The value of a particular tile on the grid
+--- Returns true if a square is currently occupied, false otherwise
+-- @param string v The value of a particular tile on the grid
 -- @return boolean
 local function isSafeSquareFloodfill( v )
     return v == '.' or v == 'O'
 end
 
 
--- "Floods" the grid in order to find out how many squares are accessible to us
--- This ruins the grid, make sure you always work on a deepcopy of the grid!
+--- "Floods" the grid in order to find out how many squares are accessible to us
+--- This ruins the grid, make sure you always work on a deepcopy of the grid!
+-- @param table pos The starting position
+-- @param table grid The game grid
+-- @param int numSafe The number of free squares from the last iteration
+-- @return int The number of free squares on the grid
 -- @see https://en.wikipedia.org/wiki/Flood_fill#Stack-based_recursive_implementation_.28four-way.29
 local function floodfill( pos, grid, numSafe )
-
     local y = pos[ 'y' ]
     local x = pos[ 'x' ]
     if isSafeSquareFloodfill( grid[y][x] ) then
@@ -159,7 +162,7 @@ local function heuristic( grid, state, my_moves, enemy_moves )
         log( DEBUG, 'Enemy might be trapped!' )
         score = score + 9999999
     end
-    
+
     
     -- get food from grid since it's a pain to update state every time we pass through minimax
     local food = {}
@@ -286,6 +289,10 @@ end
 -- @param alphaMove The best move at the current depth
 -- @param betaMove The worst move at the current depth
 -- @param maximizingPlayer True if calculating alpha at this depth, false if calculating beta
+-- @param prev_grid The game grid from the previous depth
+-- @param prev_enemy_moves The enemy move list from the previous depth
+-- @return alpha/beta The alpha or beta board score
+-- @return alphaMove/betaMove The alpha or beta next move
 function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMove, maximizingPlayer, prev_grid, prev_enemy_moves )
 
     log( DEBUG, 'Depth: ' .. depth )
