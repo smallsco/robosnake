@@ -151,6 +151,14 @@ function util.n_complement( set1, set2 )
     return complement
 end
 
+function util.prettyCoords( coords )
+    local str = ''
+    for _, v in ipairs( coords ) do
+        str = str .. string.format( '[%s,%s], ', v[ 'x' ], v[ 'y' ] )
+    end
+    return str
+end
+
 
 --- Prints the grid as an ASCII representation of the world map
 -- @param grid The game grid

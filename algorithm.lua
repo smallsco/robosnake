@@ -7,6 +7,7 @@ local DEBUG = ngx.DEBUG
 local log = ngx.log
 local mdist = util.mdist
 local n_complement = util.n_complement
+local prettyCoords = util.prettyCoords
 local printWorldMap = util.printWorldMap
 
 
@@ -15,23 +16,22 @@ local printWorldMap = util.printWorldMap
 ]]
 
 
---- Clones a table.
--- @param table orig The source table
+--- Clones a table recursively.
+--- Modified to ignore metatables because we don't use them.
+-- @param table t The source table
 -- @return table The copy of the table
--- @see http://lua-users.org/wiki/CopyTable
-local function deepcopy( orig )
-    local orig_type = type( orig )
-    local copy
-    if orig_type == 'table' then
-        copy = {}
-        for orig_key, orig_value in next, orig, nil do
-            copy[ deepcopy( orig_key ) ] = deepcopy( orig_value )
+-- @see https://gist.github.com/MihailJP/3931841
+local function deepcopy(t) -- deep-copy a table
+    if type(t) ~= "table" then return t end
+    local target = {}
+    for k, v in pairs(t) do
+        if type(v) == "table" then
+            target[k] = deepcopy(v)
+        else
+            target[k] = v
         end
-        setmetatable( copy, deepcopy( getmetatable( orig ) ) )
-    else -- number, string, boolean, etc
-        copy = orig
     end
-    return copy
+    return target
 end
 
 
@@ -187,7 +187,7 @@ local function heuristic( grid, state, my_moves, enemy_moves )
             -- "i" is used in the score so that two pieces of food that 
             -- are equal distance from me do not have identical weighting
             score = score - ( dist * foodWeight ) - i
-            log( DEBUG, string.format( 'Food %s, distance %s, score %s', inspect( food[i] ), dist, ( dist * foodWeight ) - i ) )
+            log( DEBUG, string.format( 'Food [%s,%s], distance %s, score %s', food[i][ 'x' ], food[i][ 'y' ], dist, ( dist * foodWeight ) - i ) )
         end
     end
 
@@ -199,10 +199,10 @@ local function heuristic( grid, state, my_moves, enemy_moves )
         local direction = util.direction( state[ 'enemy' ][ 'body' ][ 'data' ][1], kill_squares[i] )
         if direction == enemy_last_direction then
             score = score - ( dist * 200 )
-            log( DEBUG, string.format( 'Prime head target %s, distance %s, score %s', inspect( kill_squares[i] ), dist, dist * 200 ) )
+            log( DEBUG, string.format( 'Prime head target [%s,%s], distance %s, score %s', kill_squares[i][ 'x' ], kill_squares[i][ 'y' ], dist, dist * 200 ) )
         else
             score = score - ( dist * 100 )
-            log( DEBUG, string.format( 'Head target %s, distance %s, score %s', inspect( kill_squares[i] ), dist, dist * 100 ) )
+            log( DEBUG, string.format( 'Head target [%s,%s], distance %s, score %s', kill_squares[i][ 'x' ], kill_squares[i][ 'y' ], dist, dist * 100 ) )
         end
     end
     
@@ -329,11 +329,11 @@ function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMo
     end
   
     if maximizingPlayer then
-        log( DEBUG, string.format( 'My Turn. Position: %s Possible moves: %s', inspect( state[ 'me' ][ 'body' ][ 'data' ] ), inspect( moves ) ) )
+        log( DEBUG, string.format( 'My Turn. Position: %s Possible moves: %s', prettyCoords( state[ 'me' ][ 'body' ][ 'data' ] ), prettyCoords( moves ) ) )
         for i = 1, #moves do
                         
             -- Update grid and coords for this move
-            log( DEBUG, string.format( 'My move: %s', inspect( moves[i] ) ) )
+            log( DEBUG, string.format( 'My move: [%s,%s]', moves[i][ 'x' ], moves[i][ 'y' ] ) )
             local new_grid = deepcopy( grid )
             local new_state = deepcopy( state )
             local eating = false
@@ -409,11 +409,11 @@ function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMo
         end
         return alpha, alphaMove
     else
-        log( DEBUG, string.format( 'Enemy Turn. Position: %s Possible moves: %s', inspect( state[ 'enemy' ][ 'body' ][ 'data' ] ), inspect( moves ) ) )
+        log( DEBUG, string.format( 'Enemy Turn. Position: %s Possible moves: %s', prettyCoords( state[ 'enemy' ][ 'body' ][ 'data' ] ), prettyCoords( moves ) ) )
         for i = 1, #moves do
             
             -- Update grid and coords for this move
-            log( DEBUG, string.format( 'Enemy move: %s', inspect( moves[i] ) ) )
+            log( DEBUG, string.format( 'Enemy move: [%s,%s]', moves[i][ 'x' ], moves[i][ 'y' ] ) )
             local new_grid = deepcopy( grid )
             local new_state = deepcopy( state )
             local eating = false
