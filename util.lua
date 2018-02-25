@@ -4,6 +4,8 @@ local util = {}
 -- are faster if you create a local reference to that function.
 local log = logger.log
 local random = math.random
+-- local LOG_ENABLED = LOGGER_ENABLED
+local LOG_ENABLED = false
 
 --[[
     PRIVATE METHODS
@@ -78,7 +80,7 @@ function util.buildWorldMap( gameState )
             coordinates = { x = food[ 'x' ], y = food[ 'y' ] }
         }
 
-        log( INFO , food_log )
+        if LOG_ENABLED then log( INFO , food_log ) end
     end
     
     -- Place living snakes
@@ -91,7 +93,7 @@ function util.buildWorldMap( gameState )
             local snake = gameState[ 'snakes' ][ 'data' ][i][ 'body' ][ 'data' ][j]
             local health = gameState[ 'snakes' ][ 'data' ][i][ 'health' ]
             
-            local snake_log = {
+            local snake_log = ({
                 health = health,
                 game_id = log_id,
                 who = whoami,
@@ -101,29 +103,34 @@ function util.buildWorldMap( gameState )
                 turn = gameState[ 'turn' ],
                 length = length,
                 coordinates = { x = snake[ 'x' ], y = snake[ 'y' ] }
-             }
+             })
 
             if j == 1 then
                 grid[ snake[ 'y' ] ][ snake[ 'x' ] ] = '@'
 
                 snake_log.item = "head"
-                log( INFO, snake_log )
-                log( DEBUG, string.format( 'Placed snake head at [%s, %s]', snake[ 'x' ], snake[ 'y' ] ) )
+                if LOG_ENABLED then
+                  log( INFO, snake_log )
+                  log( DEBUG, string.format( 'Placed snake head at [%s, %s]', snake[ 'x' ], snake[ 'y' ] ) )
+                end
             elseif j == length then
                 if grid[ snake[ 'y' ] ][ snake[ 'x' ] ] ~= '@' and grid[ snake[ 'y' ] ][ snake[ 'x' ] ] ~= '#' then
                     grid[ snake[ 'y' ] ][ snake[ 'x' ] ] = '*'
                 end
 
                 snake_log.item = "tail"
-                log(INFO, snake_log)
+                if LOG_ENABLED then log(INFO, snake_log) end
             else
                 if grid[ snake[ 'y' ] ][ snake[ 'x' ] ] ~= '@' then
                     grid[ snake[ 'y' ] ][ snake[ 'x' ] ] = '#'
                 end
 
                 snake_log.item = "body"
-                log(INFO, snake_log)
-                log(DEBUG, string.format( 'Placed snake tail at [%s, %s]', snake[ 'x' ], snake[ 'y' ] ) )
+
+                if LOG_ENABLED then
+                  log(INFO, snake_log)
+                  log(DEBUG, string.format( 'Placed snake tail at [%s, %s]', snake[ 'x' ], snake[ 'y' ] ) )
+                end
             end
         end
     end

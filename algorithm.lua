@@ -7,6 +7,8 @@ local mdist = util.mdist
 local n_complement = util.n_complement
 local printWorldMap = util.printWorldMap
 local log = logger.log
+-- local LOG_ENABLED = LOGGER_ENABLED
+local LOG_ENABLED = false
 
 --[[
     PRIVATE METHODS
@@ -93,29 +95,30 @@ local function heuristic( grid, state, my_moves, enemy_moves )
         state[ 'me' ][ 'body' ][ 'data' ][1][ 'x' ] == state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'x' ]
         and state[ 'me' ][ 'body' ][ 'data' ][1][ 'y' ] == state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'y' ]
     then
-        log( DEBUG, 'Head-on-head collision!' )
+        if LOG_ENABLED then log( DEBUG, 'Head-on-head collision!' ) end
+
         if #state[ 'me' ][ 'body' ][ 'data' ] > #state[ 'enemy' ][ 'body' ][ 'data' ] then
-            log( DEBUG, 'I am bigger and win!' )
+            if LOG_ENABLED then log( DEBUG, 'I am bigger and win!' ) end
             score = score + 2147483647
         elseif #state[ 'me' ][ 'body' ][ 'data' ] < #state[ 'enemy' ][ 'body' ][ 'data' ] then
-            log( DEBUG, 'I am smaller and lose.' )
+            if LOG_ENABLED then log( DEBUG, 'I am smaller and lose.' ) end
             return -2147483648
         else
             -- do not use negative infinity here.
             -- draws are better than losing because the bounty cannot be claimed without a clear victor.
-            log( DEBUG, "It's a draw." )
+            if LOG_ENABLED then log( DEBUG, "It's a draw." ) end
             return -2147483647  -- one less than max int size
         end
     end
 
     -- My win/loss conditions
     if #my_moves == 0 then
-        log( DEBUG, 'I am trapped.' )
+        if LOG_ENABLED then log( DEBUG, 'I am trapped.' ) end
         return -2147483648
     end
 
     if state[ 'me' ][ 'health' ] < 0 then
-        log( DEBUG, 'I am out of health.' )
+        if LOG_ENABLED then log( DEBUG, 'I am out of health.' ) end
         return -2147483648
     end
     
@@ -134,18 +137,18 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     -- If the number of squares I can see from my current position is less than my length
     -- then moving to this position *may* trap and kill us, and should be avoided if possible
     if accessible_squares <= #state[ 'me' ][ 'body' ][ 'data' ] then
-        log( DEBUG, 'I smell a trap!' )
+        if LOG_ENABLED then log( DEBUG, 'I smell a trap!' ) end
         return -9999999 * ( 1 / percent_accessible )
     end
 
     
     -- Enemy win/loss conditions
     if #enemy_moves == 0 then
-        log( DEBUG, 'Enemy is trapped.' )
+        if LOG_ENABLED then log( DEBUG, 'Enemy is trapped.' ) end
         score = score + 2147483647
     end
     if state[ 'enemy' ][ 'health' ] < 0 then
-        log( DEBUG, 'Enemy is out of health.' )
+        if LOG_ENABLED then log( DEBUG, 'Enemy is out of health.' ) end
         score = score + 2147483647
     end
     
@@ -160,7 +163,7 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     -- If the number of squares the enemy can see from their current position is less than their length
     -- then moving to this position *may* trap and kill them, and should be avoided if possible
     if enemy_accessible_squares <= #state[ 'enemy' ][ 'body' ][ 'data' ] then
-        log( DEBUG, 'Enemy might be trapped!' )
+        if LOG_ENABLED then log( DEBUG, 'Enemy might be trapped!' ) end
         score = score + 9999999
     end
     
@@ -181,14 +184,17 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     if state[ 'me' ][ 'health' ] <= HUNGER_HEALTH or #state[ 'me' ][ 'body' ][ 'data' ] < 4 then
         foodWeight = 100 - state[ 'me' ][ 'health' ]
     end
-    log( DEBUG, 'Food Weight: ' .. foodWeight )
+    if LOG_ENABLED then log( DEBUG, 'Food Weight: ' .. foodWeight ) end
+
     if foodWeight > 0 then
         for i = 1, #food do
             local dist = mdist( state[ 'me' ][ 'body' ][ 'data' ][1], food[i] )
             -- "i" is used in the score so that two pieces of food that 
             -- are equal distance from me do not have identical weighting
             score = score - ( dist * foodWeight ) - i
-            log( DEBUG, string.format( 'Food %s, distance %s, score %s', inspect( food[i] ), dist, ( dist * foodWeight ) - i ) )
+            if LOG_ENABLED then
+              log( DEBUG, string.format( 'Food %s, distance %s, score %s', inspect( food[i] ), dist, ( dist * foodWeight ) - i ) )
+            end
         end
     end
 
@@ -200,10 +206,14 @@ local function heuristic( grid, state, my_moves, enemy_moves )
         local direction = util.direction( state[ 'enemy' ][ 'body' ][ 'data' ][1], kill_squares[i] )
         if direction == enemy_last_direction then
             score = score - ( dist * 200 )
-            log( DEBUG, string.format( 'Prime head target %s, distance %s, score %s', inspect( kill_squares[i] ), dist, dist * 200 ) )
+            if LOG_ENABLED then 
+              log( DEBUG, string.format( 'Prime head target %s, distance %s, score %s', inspect( kill_squares[i] ), dist, dist * 200 ) )
+            end
         else
             score = score - ( dist * 100 )
-            log( DEBUG, string.format( 'Head target %s, distance %s, score %s', inspect( kill_squares[i] ), dist, dist * 100 ) )
+            if LOG_ENABLED then 
+              log( DEBUG, string.format( 'Head target %s, distance %s, score %s', inspect( kill_squares[i] ), dist, dist * 100 ) )
+            end
         end
     end
     
@@ -223,10 +233,12 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     local center_y = math.ceil( #grid / 2 )
     local dist = mdist( state[ 'me' ][ 'body' ][ 'data' ][1], { x = center_x, y = center_y } )
     score = score - (dist * 100)
-
     log( DEBUG, string.format('Center distance %s, score %s', dist, dist*100 ) )]]
-    log( DEBUG, 'Original score: ' .. score )
-    log( DEBUG, 'Percent accessible: ' .. percent_accessible )
+
+    if LOG_ENABLED then
+      log( DEBUG, 'Original score: ' .. score )
+      log( DEBUG, 'Percent accessible: ' .. percent_accessible )
+    end
 
     if score < 0 then
         score = score * (1/percent_accessible)
@@ -234,7 +246,7 @@ local function heuristic( grid, state, my_moves, enemy_moves )
         score = score * percent_accessible
     end
     
-    log( DEBUG, 'Node score: ' .. score )
+    if LOG_ENABLED then log( DEBUG, 'Node score: ' .. score ) end
 
     return score
 end
@@ -296,7 +308,7 @@ function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMo
     local DEBUG = "debug." .. log_id
     local INFO = "info." .. log_id
 
-    log(DEBUG, 'Depth: ' .. depth )
+    if LOG_ENABLED then log(DEBUG, 'Depth: ' .. depth ) end
 
     local moves = {}
     local my_moves = algorithm.neighbours( state[ 'me' ][ 'body' ][ 'data' ][1], grid )
@@ -325,17 +337,21 @@ function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMo
             and state[ 'me' ][ 'body' ][ 'data' ][1][ 'y' ] == state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'y' ]
         )
     then
-        log( DEBUG, 'Reached MAX_RECURSION_DEPTH or endgame state.' )
+        if LOG_ENABLED then log( DEBUG, 'Reached MAX_RECURSION_DEPTH or endgame state.' ) end
         return heuristic( grid, state, my_moves, enemy_moves )
     end
   
     if maximizingPlayer then
-        log( DEBUG, string.format( 'My Turn. Position: %s Possible moves: %s', inspect( state[ 'me' ][ 'body' ][ 'data' ] ), inspect( moves ) ) )
+        if LOG_ENABLED then 
+          log( DEBUG, string.format( 'My Turn. Position: %s Possible moves: %s', inspect( state[ 'me' ][ 'body' ][ 'data' ] ), inspect( moves ) ) )
+        end
 
         for i = 1, #moves do
                         
             -- Update grid and coords for this move
-            log( DEBUG, string.format( 'My move: %s', inspect( moves[i] ) ) )
+            if LOG_ENABLED then
+              log( DEBUG, string.format( 'My move: %s', inspect( moves[i] ) ) )
+            end
 
             local new_grid = deepcopy( grid )
             local new_state = deepcopy( state )
@@ -412,12 +428,15 @@ function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMo
         end
         return alpha, alphaMove
     else
-        log( DEBUG, string.format( 'Enemy Turn. Position: %s Possible moves: %s', inspect( state[ 'enemy' ][ 'body' ][ 'data' ] ), inspect( moves ) ) )
+        if LOG_ENABLED then
+          log( DEBUG, string.format( 'Enemy Turn. Position: %s Possible moves: %s', inspect( state[ 'enemy' ][ 'body' ][ 'data' ] ), inspect( moves ) ) )
+        end
 
         for i = 1, #moves do
             
             -- Update grid and coords for this move
-            log( DEBUG, string.format( 'Enemy move: %s', inspect( moves[i] ) ) )
+            if LOG_ENABLED then log( DEBUG, string.format( 'Enemy move: %s', inspect( moves[i] ) ) ) end
+
             local new_grid = deepcopy( grid )
             local new_state = deepcopy( state )
             local eating = false
