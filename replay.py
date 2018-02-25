@@ -18,7 +18,7 @@ import copy
 
 from datetime import datetime
 
-LOG_DIR = '/var/log/td-agent/'
+LOG_DIR = '/var/log/td-agent/battlesnakes/'
 
 REPLAY_FILES = LOG_DIR + 'replays.*'
 LOG_FILES = LOG_DIR + 'luasnake.*'

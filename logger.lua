@@ -15,7 +15,6 @@ local logger = {}
       debug : Human-friendly statements of robosnake & algorithm
 --]]
 
--- local restylog = require ("resty.logger.socket")
 local restylog = require( "restyloggersocket" )
 
 --[[
@@ -24,13 +23,13 @@ local restylog = require( "restyloggersocket" )
 
 function logger.connect()
   if not restylog.initted() then
-    local ok, err = restylog.init{
+    local ok, err = restylog.init({
       sock_type = SOCKET_TYPE,
       host = SOCKET_HOST,
       port = SOCKET_PORT,
       flush_limit = 0,
-      max_retry_times = 3,
-    }
+      max_retry_times = 3
+    })
 
     if not ok then
       ngx.log(ngx.ERR, "Failed to initialize the logger\t", err)

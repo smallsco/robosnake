@@ -49,9 +49,10 @@ end
 -- @param gameState The arena's game state JSON
 -- @return A 2D table with each cell mapped to food, snakes, etc.
 function util.buildWorldMap( gameState )
+    local log_id = ngx.ctx.log_id
 
-    local INFO = "info." .. ngx.ctx.log_id
-    local DEBUG = "debug." .. ngx.ctx.log_id
+    local INFO = "info." .. log_id
+    local DEBUG = "debug." .. log_id
 
     -- Generate the tile grid
     local grid = {}
@@ -68,7 +69,7 @@ function util.buildWorldMap( gameState )
         grid[ food[ 'y' ] ][ food[ 'x' ] ] = 'O'
 
         local food_log = {
-            game_id = ngx.ctx.log_id,
+            game_id = log_id,
             width = gameState['width'],
             height = gameState[ 'height'],
             turn = gameState[ 'turn' ],
@@ -92,7 +93,7 @@ function util.buildWorldMap( gameState )
             
             local snake_log = {
                 health = health,
-                game_id = ngx.ctx.log_id,
+                game_id = log_id,
                 who = whoami,
                 name = name,
                 width = gameState['width'],

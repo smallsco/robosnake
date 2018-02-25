@@ -79,8 +79,10 @@ end
 -- @param my_moves Table containing my possible moves
 -- @param enemy_moves Table containing enemy's possible moves
 local function heuristic( grid, state, my_moves, enemy_moves )
-    local DEBUG = "debug." .. ngx.ctx.log_id
-    local INFO = "info." .. ngx.ctx.log_id
+    local log_id = ngx.ctx.log_id
+
+    local DEBUG = "debug." .. log_id
+    local INFO = "info." .. log_id
 
 
     -- Default board score
@@ -289,8 +291,10 @@ end
 -- @param betaMove The worst move at the current depth
 -- @param maximizingPlayer True if calculating alpha at this depth, false if calculating beta
 function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMove, maximizingPlayer, prev_grid, prev_enemy_moves )
-    local DEBUG = "debug." .. ngx.ctx.log_id
-    local INFO = "info." .. ngx.ctx.log_id
+    local log_id = ngx.ctx.log_id
+
+    local DEBUG = "debug." .. log_id
+    local INFO = "info." .. log_id
 
     log(DEBUG, 'Depth: ' .. depth )
 
