@@ -151,6 +151,10 @@ function util.n_complement( set1, set2 )
     return complement
 end
 
+
+-- Prints out a table of coordinate pairs in a pretty manner.
+-- @param table coords The table of coordinate pairs
+-- @return string The pretty-printed coordinate pairs
 function util.prettyCoords( coords )
     local str = ''
     for _, v in ipairs( coords ) do
