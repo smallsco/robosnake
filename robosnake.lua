@@ -104,7 +104,9 @@ local myState = {
 -- This is significantly faster than minimax on a single processor, but very challenging to parallelize
 local bestScore, bestMove = algorithm.alphabeta( grid, myState, 0, -math.huge, math.huge, nil, nil, true, {}, {} )
 log( DEBUG, string.format( 'Best score: %s', bestScore ) )
-log( DEBUG, string.format( 'Best move: [%s,%s]', bestMove[ 'x' ], bestMove[ 'y' ] ) )
+if bestMove then
+    log( DEBUG, string.format( 'Best move: [%s,%s]', bestMove[ 'x' ], bestMove[ 'y' ] ) )
+end
 
 -- FAILSAFE #1
 -- This is reached if no move is returned by the alphabeta pruning algorithm.
