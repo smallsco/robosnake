@@ -61,9 +61,13 @@ end
 -- @param table pos The starting position
 -- @param table grid The game grid
 -- @param int numSafe The number of free squares from the last iteration
+-- @param int len The maximum depth of the flood fill
 -- @return int The number of free squares on the grid
 -- @see https://en.wikipedia.org/wiki/Flood_fill#Stack-based_recursive_implementation_.28four-way.29
-local function floodfill( pos, grid, numSafe )
+local function floodfill( pos, grid, numSafe, len )
+    if numSafe >= len then
+        return numSafe
+    end
     local y = pos[ 'y' ]
     local x = pos[ 'x' ]
     if isSafeSquareFloodfill( grid[y][x] ) then
@@ -71,7 +75,7 @@ local function floodfill( pos, grid, numSafe )
         numSafe = numSafe + 1
         local n = algorithm.neighbours( pos, grid )
         for i = 1, #n do
-            numSafe = floodfill( n[i], grid, numSafe )
+            numSafe = floodfill( n[i], grid, numSafe, len )
         end
     end
     return numSafe
@@ -118,6 +122,16 @@ local function heuristic( grid, state, my_moves, enemy_moves )
         return -2147483648
     end
     
+    -- get food from grid since it's a pain to update state every time we pass through minimax
+    local food = {}
+    for y = 1, #grid do
+        for x = 1, #grid[y] do
+            if grid[y][x] == 'O' then
+                table.insert( food, { x = x, y = y } )
+            end
+        end
+    end
+    
     -- The floodfill heuristic should never be used alone as it will always avoid food!
     -- The reason for this is that food increases our length by one, causing one less
     -- square on the board to be available for movement.
@@ -125,9 +139,10 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     -- Run a floodfill from my current position, to find out:
     -- 1) How many squares can I reach from this position?
     -- 2) What percentage of the board does that represent?
-    local floodfill_grid = deepcopy(grid)
+    local floodfill_grid = deepcopy( grid )
     floodfill_grid[ state[ 'me' ][ 'body' ][ 'data' ][1][ 'y' ] ][ state[ 'me' ][ 'body' ][ 'data' ][1][ 'x' ] ] = '.'
-    local accessible_squares = floodfill( state[ 'me' ][ 'body' ][ 'data' ][1], floodfill_grid, 0 )
+    local floodfill_depth = ( 2 * #state[ 'me' ][ 'body' ][ 'data' ] ) + #food
+    local accessible_squares = floodfill( state[ 'me' ][ 'body' ][ 'data' ][1], floodfill_grid, 0, floodfill_depth )
     local percent_accessible = accessible_squares / ( #grid * #grid[1] )
     
     -- If the number of squares I can see from my current position is less than my length
@@ -151,9 +166,10 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     -- Run a floodfill from the enemy's current position, to find out:
     -- 1) How many squares can the enemy reach from this position?
     -- 2) What percentage of the board does that represent?
-    local enemy_floodfill_grid = deepcopy(grid)
+    local enemy_floodfill_grid = deepcopy( grid )
     enemy_floodfill_grid[ state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'y' ] ][ state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'x' ] ] = '.'
-    local enemy_accessible_squares = floodfill( state[ 'enemy' ][ 'body' ][ 'data' ][1], enemy_floodfill_grid, 0 )
+    local enemy_floodfill_depth = ( 2 * #state[ 'enemy' ][ 'body' ][ 'data' ] ) + #food
+    local enemy_accessible_squares = floodfill( state[ 'enemy' ][ 'body' ][ 'data' ][1], enemy_floodfill_grid, 0, enemy_floodfill_depth )
     local enemy_percent_accessible = enemy_accessible_squares / ( #grid * #grid[1] )
     
     -- If the number of squares the enemy can see from their current position is less than their length
@@ -161,17 +177,6 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     if enemy_accessible_squares <= #state[ 'enemy' ][ 'body' ][ 'data' ] then
         log( DEBUG, 'Enemy might be trapped!' )
         score = score + 9999999
-    end
-
-    
-    -- get food from grid since it's a pain to update state every time we pass through minimax
-    local food = {}
-    for y = 1, #grid do
-        for x = 1, #grid[y] do
-            if grid[y][x] == 'O' then
-                table.insert( food, { x = x, y = y } )
-            end
-        end
     end
     
     -- If there's food on the board, and I'm hungry, go for it
