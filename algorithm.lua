@@ -313,8 +313,10 @@ function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMo
     
     if maximizingPlayer then
         moves = my_moves
+        log( DEBUG, string.format( 'My Turn. Position: %s Possible moves: %s', prettyCoords( state[ 'me' ][ 'body' ][ 'data' ] ), prettyCoords( moves ) ) )
     else
         moves = enemy_moves
+        log( DEBUG, string.format( 'Enemy Turn. Position: %s Possible moves: %s', prettyCoords( state[ 'enemy' ][ 'body' ][ 'data' ] ), prettyCoords( moves ) ) )
     end
     
     if
@@ -329,12 +331,15 @@ function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMo
             and state[ 'me' ][ 'body' ][ 'data' ][1][ 'y' ] == state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'y' ]
         )
     then
-        log( DEBUG, 'Reached MAX_RECURSION_DEPTH or endgame state.' )
+        if depth == MAX_RECURSION_DEPTH then
+            log( DEBUG, 'Reached MAX_RECURSION_DEPTH.' )
+        else
+            log( DEBUG, 'Reached endgame state.' )
+        end
         return heuristic( grid, state, my_moves, enemy_moves )
     end
   
     if maximizingPlayer then
-        log( DEBUG, string.format( 'My Turn. Position: %s Possible moves: %s', prettyCoords( state[ 'me' ][ 'body' ][ 'data' ] ), prettyCoords( moves ) ) )
         for i = 1, #moves do
                         
             -- Update grid and coords for this move
@@ -414,7 +419,6 @@ function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMo
         end
         return alpha, alphaMove
     else
-        log( DEBUG, string.format( 'Enemy Turn. Position: %s Possible moves: %s', prettyCoords( state[ 'enemy' ][ 'body' ][ 'data' ] ), prettyCoords( moves ) ) )
         for i = 1, #moves do
             
             -- Update grid and coords for this move
