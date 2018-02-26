@@ -7,6 +7,7 @@ local DEBUG = ngx.DEBUG
 local log = ngx.log
 local mdist = util.mdist
 local n_complement = util.n_complement
+local prettyCoords = util.prettyCoords
 local printWorldMap = util.printWorldMap
 
 
@@ -15,23 +16,22 @@ local printWorldMap = util.printWorldMap
 ]]
 
 
---- Clones a table.
--- @param table orig The source table
+--- Clones a table recursively.
+--- Modified to ignore metatables because we don't use them.
+-- @param table t The source table
 -- @return table The copy of the table
--- @see http://lua-users.org/wiki/CopyTable
-local function deepcopy( orig )
-    local orig_type = type( orig )
-    local copy
-    if orig_type == 'table' then
-        copy = {}
-        for orig_key, orig_value in next, orig, nil do
-            copy[ deepcopy( orig_key ) ] = deepcopy( orig_value )
+-- @see https://gist.github.com/MihailJP/3931841
+local function deepcopy(t) -- deep-copy a table
+    if type(t) ~= "table" then return t end
+    local target = {}
+    for k, v in pairs(t) do
+        if type(v) == "table" then
+            target[k] = deepcopy(v)
+        else
+            target[k] = v
         end
-        setmetatable( copy, deepcopy( getmetatable( orig ) ) )
-    else -- number, string, boolean, etc
-        copy = orig
     end
-    return copy
+    return target
 end
 
 
@@ -61,9 +61,13 @@ end
 -- @param table pos The starting position
 -- @param table grid The game grid
 -- @param int numSafe The number of free squares from the last iteration
+-- @param int len The maximum depth of the flood fill
 -- @return int The number of free squares on the grid
 -- @see https://en.wikipedia.org/wiki/Flood_fill#Stack-based_recursive_implementation_.28four-way.29
-local function floodfill( pos, grid, numSafe )
+local function floodfill( pos, grid, numSafe, len )
+    if numSafe >= len then
+        return numSafe
+    end
     local y = pos[ 'y' ]
     local x = pos[ 'x' ]
     if isSafeSquareFloodfill( grid[y][x] ) then
@@ -71,7 +75,7 @@ local function floodfill( pos, grid, numSafe )
         numSafe = numSafe + 1
         local n = algorithm.neighbours( pos, grid )
         for i = 1, #n do
-            numSafe = floodfill( n[i], grid, numSafe )
+            numSafe = floodfill( n[i], grid, numSafe, len )
         end
     end
     return numSafe
@@ -118,6 +122,16 @@ local function heuristic( grid, state, my_moves, enemy_moves )
         return -2147483648
     end
     
+    -- get food from grid since it's a pain to update state every time we pass through minimax
+    local food = {}
+    for y = 1, #grid do
+        for x = 1, #grid[y] do
+            if grid[y][x] == 'O' then
+                table.insert( food, { x = x, y = y } )
+            end
+        end
+    end
+    
     -- The floodfill heuristic should never be used alone as it will always avoid food!
     -- The reason for this is that food increases our length by one, causing one less
     -- square on the board to be available for movement.
@@ -125,9 +139,10 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     -- Run a floodfill from my current position, to find out:
     -- 1) How many squares can I reach from this position?
     -- 2) What percentage of the board does that represent?
-    local floodfill_grid = deepcopy(grid)
+    local floodfill_grid = deepcopy( grid )
     floodfill_grid[ state[ 'me' ][ 'body' ][ 'data' ][1][ 'y' ] ][ state[ 'me' ][ 'body' ][ 'data' ][1][ 'x' ] ] = '.'
-    local accessible_squares = floodfill( state[ 'me' ][ 'body' ][ 'data' ][1], floodfill_grid, 0 )
+    local floodfill_depth = ( 2 * #state[ 'me' ][ 'body' ][ 'data' ] ) + #food
+    local accessible_squares = floodfill( state[ 'me' ][ 'body' ][ 'data' ][1], floodfill_grid, 0, floodfill_depth )
     local percent_accessible = accessible_squares / ( #grid * #grid[1] )
     
     -- If the number of squares I can see from my current position is less than my length
@@ -151,9 +166,10 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     -- Run a floodfill from the enemy's current position, to find out:
     -- 1) How many squares can the enemy reach from this position?
     -- 2) What percentage of the board does that represent?
-    local enemy_floodfill_grid = deepcopy(grid)
+    local enemy_floodfill_grid = deepcopy( grid )
     enemy_floodfill_grid[ state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'y' ] ][ state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'x' ] ] = '.'
-    local enemy_accessible_squares = floodfill( state[ 'enemy' ][ 'body' ][ 'data' ][1], enemy_floodfill_grid, 0 )
+    local enemy_floodfill_depth = ( 2 * #state[ 'enemy' ][ 'body' ][ 'data' ] ) + #food
+    local enemy_accessible_squares = floodfill( state[ 'enemy' ][ 'body' ][ 'data' ][1], enemy_floodfill_grid, 0, enemy_floodfill_depth )
     local enemy_percent_accessible = enemy_accessible_squares / ( #grid * #grid[1] )
     
     -- If the number of squares the enemy can see from their current position is less than their length
@@ -161,17 +177,6 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     if enemy_accessible_squares <= #state[ 'enemy' ][ 'body' ][ 'data' ] then
         log( DEBUG, 'Enemy might be trapped!' )
         score = score + 9999999
-    end
-
-    
-    -- get food from grid since it's a pain to update state every time we pass through minimax
-    local food = {}
-    for y = 1, #grid do
-        for x = 1, #grid[y] do
-            if grid[y][x] == 'O' then
-                table.insert( food, { x = x, y = y } )
-            end
-        end
     end
     
     -- If there's food on the board, and I'm hungry, go for it
@@ -187,7 +192,7 @@ local function heuristic( grid, state, my_moves, enemy_moves )
             -- "i" is used in the score so that two pieces of food that 
             -- are equal distance from me do not have identical weighting
             score = score - ( dist * foodWeight ) - i
-            log( DEBUG, string.format( 'Food %s, distance %s, score %s', inspect( food[i] ), dist, ( dist * foodWeight ) - i ) )
+            log( DEBUG, string.format( 'Food [%s,%s], distance %s, score %s', food[i][ 'x' ], food[i][ 'y' ], dist, ( dist * foodWeight ) - i ) )
         end
     end
 
@@ -199,10 +204,10 @@ local function heuristic( grid, state, my_moves, enemy_moves )
         local direction = util.direction( state[ 'enemy' ][ 'body' ][ 'data' ][1], kill_squares[i] )
         if direction == enemy_last_direction then
             score = score - ( dist * 200 )
-            log( DEBUG, string.format( 'Prime head target %s, distance %s, score %s', inspect( kill_squares[i] ), dist, dist * 200 ) )
+            log( DEBUG, string.format( 'Prime head target [%s,%s], distance %s, score %s', kill_squares[i][ 'x' ], kill_squares[i][ 'y' ], dist, dist * 200 ) )
         else
             score = score - ( dist * 100 )
-            log( DEBUG, string.format( 'Head target %s, distance %s, score %s', inspect( kill_squares[i] ), dist, dist * 100 ) )
+            log( DEBUG, string.format( 'Head target [%s,%s], distance %s, score %s', kill_squares[i][ 'x' ], kill_squares[i][ 'y' ], dist, dist * 100 ) )
         end
     end
     
@@ -308,8 +313,10 @@ function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMo
     
     if maximizingPlayer then
         moves = my_moves
+        log( DEBUG, string.format( 'My Turn. Position: %s Possible moves: %s', prettyCoords( state[ 'me' ][ 'body' ][ 'data' ] ), prettyCoords( moves ) ) )
     else
         moves = enemy_moves
+        log( DEBUG, string.format( 'Enemy Turn. Position: %s Possible moves: %s', prettyCoords( state[ 'enemy' ][ 'body' ][ 'data' ] ), prettyCoords( moves ) ) )
     end
     
     if
@@ -324,16 +331,19 @@ function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMo
             and state[ 'me' ][ 'body' ][ 'data' ][1][ 'y' ] == state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'y' ]
         )
     then
-        log( DEBUG, 'Reached MAX_RECURSION_DEPTH or endgame state.' )
+        if depth == MAX_RECURSION_DEPTH then
+            log( DEBUG, 'Reached MAX_RECURSION_DEPTH.' )
+        else
+            log( DEBUG, 'Reached endgame state.' )
+        end
         return heuristic( grid, state, my_moves, enemy_moves )
     end
   
     if maximizingPlayer then
-        log( DEBUG, string.format( 'My Turn. Position: %s Possible moves: %s', inspect( state[ 'me' ][ 'body' ][ 'data' ] ), inspect( moves ) ) )
         for i = 1, #moves do
                         
             -- Update grid and coords for this move
-            log( DEBUG, string.format( 'My move: %s', inspect( moves[i] ) ) )
+            log( DEBUG, string.format( 'My move: [%s,%s]', moves[i][ 'x' ], moves[i][ 'y' ] ) )
             local new_grid = deepcopy( grid )
             local new_state = deepcopy( state )
             local eating = false
@@ -409,11 +419,10 @@ function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMo
         end
         return alpha, alphaMove
     else
-        log( DEBUG, string.format( 'Enemy Turn. Position: %s Possible moves: %s', inspect( state[ 'enemy' ][ 'body' ][ 'data' ] ), inspect( moves ) ) )
         for i = 1, #moves do
             
             -- Update grid and coords for this move
-            log( DEBUG, string.format( 'Enemy move: %s', inspect( moves[i] ) ) )
+            log( DEBUG, string.format( 'Enemy move: [%s,%s]', moves[i][ 'x' ], moves[i][ 'y' ] ) )
             local new_grid = deepcopy( grid )
             local new_state = deepcopy( state )
             local eating = false

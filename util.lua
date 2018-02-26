@@ -152,6 +152,18 @@ function util.n_complement( set1, set2 )
 end
 
 
+-- Prints out a table of coordinate pairs in a pretty manner.
+-- @param table coords The table of coordinate pairs
+-- @return string The pretty-printed coordinate pairs
+function util.prettyCoords( coords )
+    local str = ''
+    for _, v in ipairs( coords ) do
+        str = str .. string.format( '[%s,%s], ', v[ 'x' ], v[ 'y' ] )
+    end
+    return str
+end
+
+
 --- Prints the grid as an ASCII representation of the world map
 -- @param grid The game grid
 function util.printWorldMap( grid )
