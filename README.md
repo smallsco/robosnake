@@ -59,3 +59,4 @@ Configuration is done in `/config/http.conf`.
 
 * `MAX_RECURSION_DEPTH` - this affects how far the alpha-beta pruning algorithm will look ahead. Increasing this will make SoR much smarter, but response times will be much longer.
 * `HUNGER_HEALTH` - when SoR's health dips to this value (or below) it will start looking for food.
+* `LOW_FOOD` - if the food on the game board is at this number or lower, SoR will use a less aggressive heuristic and prioritize food.
