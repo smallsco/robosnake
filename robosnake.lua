@@ -25,8 +25,7 @@ local neighbours = algorithm.neighbours
 local now = ngx.now
 local update_time = ngx.update_time
 local log = logger.log
--- local LOG_ENABLED = LOGGER_ENABLED
-local LOG_ENABLED = false
+local LOG_ENABLED = LOGGER_ENABLED
 
 --[[
     MAIN APP LOGIC

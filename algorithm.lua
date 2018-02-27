@@ -7,8 +7,7 @@ local mdist = util.mdist
 local n_complement = util.n_complement
 local printWorldMap = util.printWorldMap
 local log = logger.log
--- local LOG_ENABLED = LOGGER_ENABLED
-local LOG_ENABLED = false
+local LOG_ENABLED = LOGGER_ENABLED
 
 --[[
     PRIVATE METHODS

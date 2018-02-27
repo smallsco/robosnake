@@ -22,6 +22,10 @@ local restylog = require( "restyloggersocket" )
 --]]
 
 function logger.connect()
+  if not LOGGER_ENABLED then
+    return
+  end
+
   if not restylog.initted() then
     local ok, err = restylog.init({
       sock_type = SOCKET_TYPE,
@@ -39,6 +43,11 @@ function logger.connect()
 end
 
 function logger.log( subtag, message_string )
+  -- failsafe
+  if not LOGGER_ENABLED then
+    return
+  end
+
   tag = "luasnake." .. subtag
   time = ngx.now()
   msg = cjson.encode({ tag, time, message_string } )

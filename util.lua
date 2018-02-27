@@ -4,8 +4,7 @@ local util = {}
 -- are faster if you create a local reference to that function.
 local log = logger.log
 local random = math.random
--- local LOG_ENABLED = LOGGER_ENABLED
-local LOG_ENABLED = false
+local LOG_ENABLED = LOGGER_ENABLED
 
 --[[
     PRIVATE METHODS
