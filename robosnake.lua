@@ -75,24 +75,21 @@ end
 
 -- Convert to 1-based indexing
 for i = 1, #gameState[ 'food' ][ 'data' ] do
-    gameState[ 'food' ][ 'data' ][i][ 'x' ] = gameState[ 'food' ][ 'data' ][i][ 'x' ] + 1
-    gameState[ 'food' ][ 'data' ][i][ 'y' ] = gameState[ 'food' ][ 'data' ][i][ 'y' ] + 1
+    gameState[ 'food' ][ 'data' ][ i ][ 'x' ] = gameState[ 'food' ][ 'data' ][ i ][ 'x' ] + 1
+    gameState[ 'food' ][ 'data' ][ i ][ 'y' ] = gameState[ 'food' ][ 'data' ][ i ][ 'y' ] + 1
 end
 for i = 1, #gameState[ 'snakes' ][ 'data' ] do
-    for j = 1, #gameState[ 'snakes' ][ 'data' ][i][ 'body' ][ 'data' ] do
-        gameState[ 'snakes' ][ 'data' ][i][ 'body' ][ 'data' ][j][ 'x' ] = gameState[ 'snakes' ][ 'data' ][i][ 'body' ][ 'data' ][j][ 'x' ] + 1
-        gameState[ 'snakes' ][ 'data' ][i][ 'body' ][ 'data' ][j][ 'y' ] = gameState[ 'snakes' ][ 'data' ][i][ 'body' ][ 'data' ][j][ 'y' ] + 1
+    for j = 1, #gameState[ 'snakes' ][ 'data' ][ i ][ 'body' ][ 'data' ] do
+        gameState[ 'snakes' ][ 'data' ][ i ][ 'body' ][ 'data' ][ j ][ 'x' ] = gameState[ 'snakes' ][ 'data' ][ i ][ 'body' ][ 'data' ][ j ][ 'x' ] + 1
+        gameState[ 'snakes' ][ 'data' ][ i ][ 'body' ][ 'data' ][ j ][ 'y' ] = gameState[ 'snakes' ][ 'data' ][ i ][ 'body' ][ 'data' ][ j ][ 'y' ] + 1
     end
 end
 for i = 1, #gameState[ 'you' ][ 'body' ][ 'data' ] do
-    gameState[ 'you' ][ 'body' ][ 'data' ][i][ 'x' ] = gameState[ 'you' ][ 'body' ][ 'data' ][i][ 'x' ] + 1
-    gameState[ 'you' ][ 'body' ][ 'data' ][i][ 'y' ] = gameState[ 'you' ][ 'body' ][ 'data' ][i][ 'y' ] + 1
+    gameState[ 'you' ][ 'body' ][ 'data' ][ i ][ 'x' ] = gameState[ 'you' ][ 'body' ][ 'data' ][ i ][ 'x' ] + 1
+    gameState[ 'you' ][ 'body' ][ 'data' ][ i ][ 'y' ] = gameState[ 'you' ][ 'body' ][ 'data' ][ i ][ 'y' ] + 1
 end
 
 local grid = util.buildWorldMap( gameState )
-
--- print to local NGX
--- util.printWorldMap( grid )
 
 -- This snake makes use of alpha-beta pruning to advance the gamestate
 -- and predict enemy behavior. However, it only works for a single
@@ -108,14 +105,14 @@ local me = gameState[ 'you' ]
 local enemy = nil
 local distance = 99999
 for i = 1, #gameState[ 'snakes' ][ 'data' ] do
-    if gameState[ 'snakes' ][ 'data' ][i][ 'id' ] ~= me[ 'id' ] then
+    if gameState[ 'snakes' ][ 'data' ][ i ][ 'id' ] ~= me[ 'id' ] then
         local d = mdist(
             me[ 'body' ][ 'data' ][1],
-            gameState[ 'snakes' ][ 'data' ][i][ 'body' ][ 'data' ][1]
+            gameState[ 'snakes' ][ 'data' ][ i ][ 'body' ][ 'data' ][1]
         )
         if d < distance then
             distance = d
-            enemy = gameState[ 'snakes' ][ 'data' ][i]
+            enemy = gameState[ 'snakes' ][ 'data' ][ i ]
         end
     end
 end
@@ -138,8 +135,10 @@ local myState = {
 -- This is significantly faster than minimax on a single processor, but very challenging to parallelize
 local bestScore, bestMove = algorithm.alphabeta( grid, myState, 0, -math.huge, math.huge, nil, nil, true, {}, {} )
 
-if LOG_ENABLED then
-  log( DEBUG, string.format( 'Best score: %s\tBest move: %s', bestScore, inspect( bestMove ) ) )
+if LOG_ENABLED then log( DEBUG, string.format( 'Best score: %s', bestScore ) ) end
+
+if bestMove and LOG_ENABLED then
+    log( DEBUG, string.format( 'Best move: [%s,%s]', bestMove[ 'x' ], bestMove[ 'y' ] ) )
 end
 
 -- FAILSAFE #1
@@ -217,6 +216,7 @@ collectgarbage()
 
 update_time()
 totalTime = now() - ngx.ctx.startTime
+
 if LOG_ENABLED then
-  log( DEBUG, { who = "game", item = "time", value = { response = string.format('%.2f', respTime), total = string.format('%.2f', totalTime) } } )
+    log( DEBUG, string.format( 'time to response: %.2f, total time: %.2f', respTime, totalTime ) )
 end
