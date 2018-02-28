@@ -92,7 +92,6 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     local DEBUG = "debug." .. log_id
     local INFO = "info." .. log_id
 
-
     -- Default board score
     local score = 0
 
@@ -188,8 +187,12 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     -- If there's food on the board, and I'm hungry, go for it
     -- If I'm not hungry, ignore it
     local foodWeight = 0
-    if state[ 'me' ][ 'health' ] <= HUNGER_HEALTH or #state[ 'me' ][ 'body' ][ 'data' ] < 4 then
-        foodWeight = 100 - state[ 'me' ][ 'health' ]
+    if #food <= LOW_FOOD then
+        foodWeight = 200 - ( 2 * state[ 'me' ][ 'health' ] )
+    else
+        if state[ 'me' ][ 'health' ] <= HUNGER_HEALTH or #state[ 'me' ][ 'body' ][ 'data' ] < 4 then
+            foodWeight = 100 - state[ 'me' ][ 'health' ]
+        end
     end
     if LOG_ENABLED then log( DEBUG, 'Food Weight: ' .. foodWeight ) end
 
@@ -206,20 +209,24 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     end
 
     -- Hang out near the enemy's head
+    local aggressiveWeight = 100
+    if #food <= LOW_FOOD then
+        aggressiveWeight = state[ 'me' ][ 'health' ]
+    end
     local kill_squares = algorithm.neighbours( state[ 'enemy' ][ 'body' ][ 'data' ][1], grid )
     local enemy_last_direction = util.direction( state[ 'enemy' ][ 'body' ][ 'data' ][2], state[ 'enemy' ][ 'body' ][ 'data' ][1] )
     for i = 1, #kill_squares do
         local dist = mdist( state[ 'me' ][ 'body' ][ 'data' ][1], kill_squares[i] )
         local direction = util.direction( state[ 'enemy' ][ 'body' ][ 'data' ][1], kill_squares[i] )
         if direction == enemy_last_direction then
-            score = score - ( dist * 200 )
+            score = score - ( dist * ( 2 * aggressiveWeight ) )
             if LOG_ENABLED then
-                log( DEBUG, string.format( 'Prime head target [%s,%s], distance %s, score %s', kill_squares[i][ 'x' ], kill_squares[i][ 'y' ], dist, dist * 200 ) )
+                log( DEBUG, string.format( 'Prime head target [%s,%s], distance %s, score %s', kill_squares[i][ 'x' ], kill_squares[i][ 'y' ], dist, dist * ( 2 * aggressiveWeight ) ) )
             end
         else
-            score = score - ( dist * 100 )
+            score = score - ( dist * aggressiveWeight )
             if LOG_ENABLED then
-                log( DEBUG, string.format( 'Head target [%s,%s], distance %s, score %s', kill_squares[i][ 'x' ], kill_squares[i][ 'y' ], dist, dist * 100 ) )
+                log( DEBUG, string.format( 'Head target [%s,%s], distance %s, score %s', kill_squares[i][ 'x' ], kill_squares[i][ 'y' ], dist, dist * aggressiveWeight ) )
             end
         end
     end

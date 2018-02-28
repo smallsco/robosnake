@@ -90,7 +90,10 @@ def process_wrapper(filename, key, chunkStart, chunkSize):
       if len(keys) < 3:
         continue
 
-      game_id = keys[0][-1]
+      # full game id is stored in the final space of tag
+      id_split = keys[0].split('.')
+      game_id = id_split[2]
+
       snake_id = keys[1]
       timestamp = keys[2]
 
