@@ -3,13 +3,12 @@ local algorithm = {}
 
 -- Lua optimization: any functions from another module called more than once
 -- are faster if you create a local reference to that function.
-local DEBUG = ngx.DEBUG
-local log = ngx.log
 local mdist = util.mdist
 local n_complement = util.n_complement
 local prettyCoords = util.prettyCoords
 local printWorldMap = util.printWorldMap
-
+local log = logger.log
+local LOG_ENABLED = LOGGER_ENABLED
 
 --[[
     PRIVATE METHODS
@@ -88,6 +87,9 @@ end
 -- @param my_moves Table containing my possible moves
 -- @param enemy_moves Table containing enemy's possible moves
 local function heuristic( grid, state, my_moves, enemy_moves )
+    local log_id = ngx.ctx.log_id
+    local DEBUG = "debug." .. log_id
+    local INFO = "info." .. log_id
 
     -- Default board score
     local score = 0
@@ -97,28 +99,30 @@ local function heuristic( grid, state, my_moves, enemy_moves )
         state[ 'me' ][ 'body' ][ 'data' ][1][ 'x' ] == state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'x' ]
         and state[ 'me' ][ 'body' ][ 'data' ][1][ 'y' ] == state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'y' ]
     then
-        log( DEBUG, 'Head-on-head collision!' )
+        if LOG_ENABLED then log( DEBUG, 'Head-on-head collision!' ) end
+
         if #state[ 'me' ][ 'body' ][ 'data' ] > #state[ 'enemy' ][ 'body' ][ 'data' ] then
-            log( DEBUG, 'I am bigger and win!' )
+            if LOG_ENABLED then log( DEBUG, 'I am bigger and win!' ) end
+
             score = score + 2147483647
         elseif #state[ 'me' ][ 'body' ][ 'data' ] < #state[ 'enemy' ][ 'body' ][ 'data' ] then
-            log( DEBUG, 'I am smaller and lose.' )
+            if LOG_ENABLED then log( DEBUG, 'I am smaller and lose.' ) end
             return -2147483648
         else
             -- do not use negative infinity here.
             -- draws are better than losing because the bounty cannot be claimed without a clear victor.
-            log( DEBUG, "It's a draw." )
+            if LOG_ENABLED then log( DEBUG, "It's a draw." ) end
             return -2147483647  -- one less than max int size
         end
     end
 
     -- My win/loss conditions
     if #my_moves == 0 then
-        log( DEBUG, 'I am trapped.' )
+        if LOG_ENABLED then log( DEBUG, 'I am trapped.' ) end
         return -2147483648
     end
     if state[ 'me' ][ 'health' ] < 0 then
-        log( DEBUG, 'I am out of health.' )
+        if LOG_ENABLED then log( DEBUG, 'I am out of health.' ) end
         return -2147483648
     end
     
@@ -148,18 +152,18 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     -- If the number of squares I can see from my current position is less than my length
     -- then moving to this position *may* trap and kill us, and should be avoided if possible
     if accessible_squares <= #state[ 'me' ][ 'body' ][ 'data' ] then
-        log( DEBUG, 'I smell a trap!' )
+        if LOG_ENABLED then log( DEBUG, 'I smell a trap!' ) end
         return -9999999 * ( 1 / percent_accessible )
     end
 
     
     -- Enemy win/loss conditions
     if #enemy_moves == 0 then
-        log( DEBUG, 'Enemy is trapped.' )
+        if LOG_ENABLED then log( DEBUG, 'Enemy is trapped.' ) end
         score = score + 2147483647
     end
     if state[ 'enemy' ][ 'health' ] < 0 then
-        log( DEBUG, 'Enemy is out of health.' )
+        if LOG_ENABLED then log( DEBUG, 'Enemy is out of health.' ) end
         score = score + 2147483647
     end
     
@@ -175,7 +179,7 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     -- If the number of squares the enemy can see from their current position is less than their length
     -- then moving to this position *may* trap and kill them, and should be avoided if possible
     if enemy_accessible_squares <= #state[ 'enemy' ][ 'body' ][ 'data' ] then
-        log( DEBUG, 'Enemy might be trapped!' )
+        if LOG_ENABLED then log( DEBUG, 'Enemy might be trapped!' ) end
         score = score + 9999999
     end
     
@@ -189,14 +193,16 @@ local function heuristic( grid, state, my_moves, enemy_moves )
             foodWeight = 100 - state[ 'me' ][ 'health' ]
         end
     end
-    log( DEBUG, 'Food Weight: ' .. foodWeight )
+    if LOG_ENABLED then log( DEBUG, 'Food Weight: ' .. foodWeight ) end
     if foodWeight > 0 then
         for i = 1, #food do
             local dist = mdist( state[ 'me' ][ 'body' ][ 'data' ][1], food[i] )
             -- "i" is used in the score so that two pieces of food that 
             -- are equal distance from me do not have identical weighting
             score = score - ( dist * foodWeight ) - i
-            log( DEBUG, string.format( 'Food [%s,%s], distance %s, score %s', food[i][ 'x' ], food[i][ 'y' ], dist, ( dist * foodWeight ) - i ) )
+            if LOG_ENABLED then
+                log( DEBUG, string.format( 'Food [%s,%s], distance %s, score %s', food[i][ 'x' ], food[i][ 'y' ], dist, ( dist * foodWeight ) - i ) )
+            end
         end
     end
 
@@ -212,10 +218,14 @@ local function heuristic( grid, state, my_moves, enemy_moves )
         local direction = util.direction( state[ 'enemy' ][ 'body' ][ 'data' ][1], kill_squares[i] )
         if direction == enemy_last_direction then
             score = score - ( dist * ( 2 * aggressiveWeight ) )
-            log( DEBUG, string.format( 'Prime head target [%s,%s], distance %s, score %s', kill_squares[i][ 'x' ], kill_squares[i][ 'y' ], dist, dist * ( 2 * aggressiveWeight ) ) )
+            if LOG_ENABLED then
+                log( DEBUG, string.format( 'Prime head target [%s,%s], distance %s, score %s', kill_squares[i][ 'x' ], kill_squares[i][ 'y' ], dist, dist * ( 2 * aggressiveWeight ) ) )
+            end
         else
             score = score - ( dist * aggressiveWeight )
-            log( DEBUG, string.format( 'Head target [%s,%s], distance %s, score %s', kill_squares[i][ 'x' ], kill_squares[i][ 'y' ], dist, dist * aggressiveWeight ) )
+            if LOG_ENABLED then
+                log( DEBUG, string.format( 'Head target [%s,%s], distance %s, score %s', kill_squares[i][ 'x' ], kill_squares[i][ 'y' ], dist, dist * aggressiveWeight ) )
+            end
         end
     end
     
@@ -237,16 +247,18 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     score = score - (dist * 100)
     log( DEBUG, string.format('Center distance %s, score %s', dist, dist*100 ) )]]
     
- 
-    log( DEBUG, 'Original score: ' .. score )
-    log( DEBUG, 'Percent accessible: ' .. percent_accessible )
+    if LOG_ENABLED then
+        log( DEBUG, 'Original score: ' .. score )
+        log( DEBUG, 'Percent accessible: ' .. percent_accessible )
+    end
+
     if score < 0 then
         score = score * (1/percent_accessible)
     elseif score > 0 then
         score = score * percent_accessible
     end
     
-    log( DEBUG, 'Score: ' .. score )
+    if LOG_ENABLED then log( DEBUG, 'Score: ' .. score ) end
 
     return score
 end
@@ -307,8 +319,12 @@ end
 -- @return alpha/beta The alpha or beta board score
 -- @return alphaMove/betaMove The alpha or beta next move
 function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMove, maximizingPlayer, prev_grid, prev_enemy_moves )
+    local log_id = ngx.ctx.log_id
+ 
+    local DEBUG = "debug." .. log_id
+    local INFO = "info." .. log_id
 
-    log( DEBUG, 'Depth: ' .. depth )
+    if LOG_ENABLED then log( DEBUG, 'Depth: ' .. depth ) end
 
     local moves = {}
     local my_moves = algorithm.neighbours( state[ 'me' ][ 'body' ][ 'data' ][1], grid )
@@ -321,10 +337,14 @@ function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMo
     
     if maximizingPlayer then
         moves = my_moves
-        log( DEBUG, string.format( 'My Turn. Position: %s Possible moves: %s', prettyCoords( state[ 'me' ][ 'body' ][ 'data' ] ), prettyCoords( moves ) ) )
+        if LOG_ENABLED then
+            log( DEBUG, string.format( 'My Turn. Position: %s Possible moves: %s', prettyCoords( state[ 'me' ][ 'body' ][ 'data' ] ), prettyCoords( moves ) ) )
+        end
     else
         moves = enemy_moves
-        log( DEBUG, string.format( 'Enemy Turn. Position: %s Possible moves: %s', prettyCoords( state[ 'enemy' ][ 'body' ][ 'data' ] ), prettyCoords( moves ) ) )
+        if LOG_ENABLED then
+            log( DEBUG, string.format( 'Enemy Turn. Position: %s Possible moves: %s', prettyCoords( state[ 'enemy' ][ 'body' ][ 'data' ] ), prettyCoords( moves ) ) )
+        end
     end
     
     if
@@ -339,9 +359,9 @@ function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMo
             and state[ 'me' ][ 'body' ][ 'data' ][1][ 'y' ] == state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'y' ]
         )
     then
-        if depth == MAX_RECURSION_DEPTH then
+        if depth == MAX_RECURSION_DEPTH and LOG_ENABLED then
             log( DEBUG, 'Reached MAX_RECURSION_DEPTH.' )
-        else
+        elseif LOG_ENABLED then 
             log( DEBUG, 'Reached endgame state.' )
         end
         return heuristic( grid, state, my_moves, enemy_moves )
