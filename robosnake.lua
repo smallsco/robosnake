@@ -19,8 +19,9 @@
 
 -- Lua optimization: any functions from another module called more than once
 -- are faster if you create a local reference to that function.
-local DEBUG = ngx.DEBUG
-local log = ngx.log
+local LOG_ENABLED = LOGGER_ENABLED
+
+local log = logger.log
 local mdist = util.mdist
 local neighbours = algorithm.neighbours
 local now = ngx.now
@@ -36,11 +37,42 @@ math.randomseed( os.time() )
 
 -- Get the POST request and decode the JSON
 local request_body = ngx.var.request_body
-log( DEBUG, 'Got request data: ' .. request_body )
+ngx.log( ngx.DEBUG, 'Got request data: ' .. request_body )
 local gameState = cjson.decode( request_body )
 
+
+
+--[[
+    LOGGING CONFIGURATION
+
+    Data received from gameboard is not unique between games.
+    E.g., One instance of the game board will have the same               
+    game id and snake id for each restart, but different
+    start times. We use all three to create a shared log_id
+--]]
+local game_start_time = ngx.ctx.startTime
+local cache_key = "" .. gameState[ 'id' ] .. ":" .. gameState[ 'you' ][ 'id' ]
+
+if gameState[ 'turn' ] == 0 then
+    ngx.shared.game_keys:set(cache_key, game_start_time)
+    if LOG_ENABLED then
+      log("replay_key", { log_id = "" .. gameState[ 'id' ] .. ":" .. gameState[ 'you' ][ 'id' ] .. ":" .. game_start_time } )
+    end
+else
+    game_start_time = ngx.shared.game_keys:get(cache_key)
+end
+
+local log_id = cache_key .. ":" .. game_start_time
+ngx.ctx.log_id = log_id
+
+-- Logging tags
+-- INFO for parseable data. DEBUG for human-friendly.
+local INFO = "info." .. log_id
+local DEBUG = "debug." .. log_id
+
+
+
 -- Convert to 1-based indexing
-log( DEBUG, 'Converting Coordinates' )
 for i = 1, #gameState[ 'food' ][ 'data' ] do
     gameState[ 'food' ][ 'data' ][ i ][ 'x' ] = gameState[ 'food' ][ 'data' ][ i ][ 'x' ] + 1
     gameState[ 'food' ][ 'data' ][ i ][ 'y' ] = gameState[ 'food' ][ 'data' ][ i ][ 'y' ] + 1
@@ -56,9 +88,8 @@ for i = 1, #gameState[ 'you' ][ 'body' ][ 'data' ] do
     gameState[ 'you' ][ 'body' ][ 'data' ][ i ][ 'y' ] = gameState[ 'you' ][ 'body' ][ 'data' ][ i ][ 'y' ] + 1
 end
 
-log( DEBUG, 'Building World Map' )
 local grid = util.buildWorldMap( gameState )
-util.printWorldMap( grid )
+-- util.printWorldMap( grid )
 
 
 -- This snake makes use of alpha-beta pruning to advance the gamestate
@@ -66,7 +97,7 @@ util.printWorldMap( grid )
 -- enemy. While you can put it into a game with multiple snakes, it
 -- will only look at the closest enemy when deciding the next move
 -- to make.
-if #gameState[ 'snakes' ][ 'data' ] > 2 then
+if #gameState[ 'snakes' ][ 'data' ] > 2 and LOG_ENABLED then
     log( DEBUG, "WARNING: Multiple enemies detected. Choosing the closest snake for behavior prediction." )
 end
 
@@ -90,11 +121,14 @@ end
 -- This is just to keep from crashing if we're testing in an arena by ourselves
 -- though I am curious to see what will happen when trying to predict my own behavior!
 if not enemy then
-    log( DEBUG, "WARNING: I am the only snake in the game! Using MYSELF for behavior prediction." )
+    if LOG_ENABLED then
+        log( DEBUG, "WARNING: I am the only snake in the game! Using MYSELF for behavior prediction." )
+    end
     enemy = me
 end
 
-log( DEBUG, 'Enemy Snake: ' .. enemy[ 'name' ] )
+if LOG_ENABLED then log( DEBUG, 'Enemy Snake: ' .. enemy[ 'name' ] ) end
+
 local myState = {
     me = me,
     enemy = enemy
@@ -103,8 +137,8 @@ local myState = {
 -- Alpha-Beta Pruning algorithm
 -- This is significantly faster than minimax on a single processor, but very challenging to parallelize
 local bestScore, bestMove = algorithm.alphabeta( grid, myState, 0, -math.huge, math.huge, nil, nil, true, {}, {} )
-log( DEBUG, string.format( 'Best score: %s', bestScore ) )
-if bestMove then
+if LOG_ENABLED then log( DEBUG, string.format( 'Best score: %s', bestScore ) ) end
+if bestMove and LOG_ENABLED then
     log( DEBUG, string.format( 'Best move: [%s,%s]', bestMove[ 'x' ], bestMove[ 'y' ] ) )
 end
 
@@ -116,7 +150,8 @@ end
 -- max recursion depth we are able to break free (i.e. trapped by the enemy's tail which
 -- later gets out of the way)
 if not bestMove then
-    log( DEBUG, "WARNING: No move returned from alphabeta!" )
+    if LOG_ENABLED then log( DEBUG, "WARNING: No move returned from alphabeta!" ) end
+
     local my_moves = neighbours( myState[ 'me' ][ 'body' ][ 'data' ][1], grid )
     local enemy_moves = neighbours( myState[ 'enemy' ][ 'body' ][ 'data' ][1], grid )
     local safe_moves = util.n_complement( my_moves, enemy_moves )
@@ -124,12 +159,12 @@ if not bestMove then
     if #myState[ 'me' ][ 'body' ][ 'data' ] <= #myState[ 'enemy' ][ 'body' ][ 'data' ] and #safe_moves > 0 then
         -- We're smaller than the enemy and there's one or more safe squares (a square that
         -- we can reach and the enemy can not) available - prefer those squares.
-        log( DEBUG, "Moving to a random safe neighbour." )
+        if LOG_ENABLED then log( DEBUG, "Moving to a random safe neighbour." ) end
         my_moves = safe_moves
     else
         -- We're _larger_ than the enemy, or we're smaller but there are no safe squares
         -- available - we may end up in a head-on-head collision.
-        log( DEBUG, "Moving to a random free neighbour." )
+        if LOG_ENABLED then log( DEBUG, "Moving to a random free neighbour." ) end
     end
     
     if #my_moves > 0 then
@@ -139,7 +174,9 @@ if not bestMove then
         -- If we reach this point, there isn't anywhere safe to move to and we're going to die.
         -- This just prefers snake deaths over wall deaths, so that the official battlesnake
         -- unit tests pass.
-        log( DEBUG, "FATAL: No free neighbours. I'm going to die. Trying to avoid a wall..." )
+        if LOG_ENABLED then
+            log( DEBUG, "FATAL: No free neighbours. I'm going to die. Trying to avoid a wall..." )
+        end
         my_moves = neighbours( myState[ 'me' ][ 'body' ][ 'data' ][1], grid, true )
         bestMove = my_moves[ math.random( #my_moves ) ]
     end
@@ -149,14 +186,17 @@ end
 -- We're dead. This only exists to ensure that we always return a valid JSON response
 -- to the game board. It always goes left.
 if not bestMove then
-    log( DEBUG, "FATAL: Wall collision unavoidable. I'm going to die. Moving left!" )
+    if LOG_ENABLED then
+        log( DEBUG, "FATAL: Wall collision unavoidable. I'm going to die. Moving left!" )
+    end
     bestMove = { x = me[ 'body' ][ 'data' ][1][ 'x' ] - 1, y = me[ 'body' ][ 'data' ][1][ 'y' ] }
 end
 
 -- Move to the destination we decided on
 local dir = util.direction( me[ 'body' ][ 'data' ][1], bestMove )
-log( DEBUG, string.format( 'Decision: Moving %s to [%s,%s]', dir, bestMove[ 'x' ], bestMove[ 'y' ] ) )
-
+if LOG_ENABLED then
+    log( DEBUG, string.format( 'Decision: Moving %s to [%s,%s]', dir, bestMove[ 'x' ], bestMove[ 'y' ] ) )
+end
 
 -- Return response to the arena
 local response = { move = dir, taunt = util.bieberQuote() }
@@ -173,11 +213,11 @@ respTime = endTime - ngx.ctx.startTime
 -- then do the garbage collection in the worker process before handling the next request
 local ok, err = ngx.eof()
 if not ok then
-    log( ngx.ERR, 'error calling eof function: ' .. err )
+    ngx.log( ngx.ERR, 'error calling eof function: ' .. err )
 end
 collectgarbage()
 collectgarbage()
 
 update_time()
 totalTime = now() - ngx.ctx.startTime
-log( DEBUG, string.format( 'time to response: %.2f, total time: %.2f', respTime, totalTime ) )
+ngx.log( DEBUG, string.format( 'time to response: %.2f, total time: %.2f', respTime, totalTime ) )
