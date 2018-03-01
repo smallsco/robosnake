@@ -42,6 +42,8 @@ end
 local function isSafeSquare( v, failsafe )
     if failsafe then
         return true
+    elseif HEAD_ON_NECK_DETECTION then
+        return v == '.' or v == 'O' or v == '*' or v == '@'
     else
         return v == '.' or v == 'O' or v == '*'
     end
@@ -92,15 +94,18 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     -- Default board score
     local score = 0
 
-    -- Handle head-on-head collisions.
+    -- Handle head-on-neck collisions.
     if
-        state[ 'me' ][ 'body' ][ 'data' ][1][ 'x' ] == state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'x' ]
-        and state[ 'me' ][ 'body' ][ 'data' ][1][ 'y' ] == state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'y' ]
+        HEAD_ON_NECK_DETECTION == true
+        and state[ 'me' ][ 'body' ][ 'data' ][1][ 'x' ] == state[ 'enemy' ][ 'body' ][ 'data' ][2][ 'x' ]
+        and state[ 'me' ][ 'body' ][ 'data' ][1][ 'y' ] == state[ 'enemy' ][ 'body' ][ 'data' ][2][ 'y' ]
+        and state[ 'me' ][ 'body' ][ 'data' ][2][ 'x' ] == state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'x' ]
+        and state[ 'me' ][ 'body' ][ 'data' ][2][ 'y' ] == state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'y' ]
     then
-        log( DEBUG, 'Head-on-head collision!' )
+        log( DEBUG, 'Head-on-neck collision!' )
         if #state[ 'me' ][ 'body' ][ 'data' ] > #state[ 'enemy' ][ 'body' ][ 'data' ] then
             log( DEBUG, 'I am bigger and win!' )
-            score = score + 2147483647
+            return 2147483647  -- safe to short circuit as we are in close proximity to the enemy
         elseif #state[ 'me' ][ 'body' ][ 'data' ] < #state[ 'enemy' ][ 'body' ][ 'data' ] then
             log( DEBUG, 'I am smaller and lose.' )
             return -2147483648
@@ -111,13 +116,77 @@ local function heuristic( grid, state, my_moves, enemy_moves )
             return -2147483647  -- one less than max int size
         end
     end
+    
+    -- Handle head-on-head collisions.
+    if
+        state[ 'me' ][ 'body' ][ 'data' ][1][ 'x' ] == state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'x' ]
+        and state[ 'me' ][ 'body' ][ 'data' ][1][ 'y' ] == state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'y' ]
+    then
+        log( DEBUG, 'Head-on-head collision!' )
+        if #state[ 'me' ][ 'body' ][ 'data' ] > #state[ 'enemy' ][ 'body' ][ 'data' ] then
+            log( DEBUG, 'I am bigger and win!' )
+            if HEAD_ON_NECK_DETECTION == true then
+                return 2147483647  -- safe to short circuit as we are in close proximity to the enemy
+            else
+                score = score + 2147483647
+            end
+        elseif #state[ 'me' ][ 'body' ][ 'data' ] < #state[ 'enemy' ][ 'body' ][ 'data' ] then
+            log( DEBUG, 'I am smaller and lose.' )
+            return -2147483648
+        else
+            -- do not use negative infinity here.
+            -- draws are better than losing because the bounty cannot be claimed without a clear victor.
+            log( DEBUG, "It's a draw." )
+            return -2147483647  -- one less than max int size
+        end
+    end
+    
+    if HEAD_ON_NECK_DETECTION == true then
+        -- Handle head-on-body collisions
+        -- Normally, this should never occur due to filtering out grid moves that contain a snake body.
+        -- HOWEVER, if we attempt a head-on-neck attack and the enemy doesn't also try and attack us at the same time,
+        -- we could end up in the same square as one of its' body parts (and vice versa). So we have to explicitly test
+        -- for this case now.
+        local me_in_me = false
+        local me_in_enemy = false
+        local enemy_in_me = false
+        local enemy_in_enemy = false
+        for k, v in ipairs( state[ 'enemy' ][ 'body' ][ 'data' ] ) do
+            if state[ 'me' ][ 'body' ][ 'data' ][1][ 'x' ] == v[ 'x' ] and state[ 'me' ][ 'body' ][ 'data' ][1][ 'y' ] == v[ 'y' ] then
+                me_in_enemy = true
+            end
+            if k > 1 and state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'x' ] == v[ 'x' ] and state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'y' ] == v[ 'y' ] then
+                enemy_in_enemy = true
+            end
+        end
+        
+        for k, v in ipairs( state[ 'me' ][ 'body' ][ 'data' ] ) do
+            if state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'x' ] == v[ 'x' ] and state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'y' ] == v[ 'y' ] then
+                enemy_in_me = true
+            end
+            if k > 1 and state[ 'me' ][ 'body' ][ 'data' ][1][ 'x' ] == v[ 'x' ] and state[ 'me' ][ 'body' ][ 'data' ][1][ 'y' ] == v[ 'y' ] then
+                me_in_me = true
+            end
+        end
+        
+        if ( me_in_me or me_in_enemy ) and ( enemy_in_me or enemy_in_enemy ) then
+            log( DEBUG, "Both me and the enemy ran into a snake body." )
+            return -2147483647  -- one less than max int size
+        elseif ( me_in_me or me_in_enemy ) and not ( enemy_in_me or enemy_in_enemy ) then
+            log( DEBUG, 'I ran into a snake body.' )
+            return -2147483648
+        elseif ( enemy_in_me or enemy_in_enemy ) and not ( me_in_me or me_in_enemy ) then
+            log( DEBUG, 'Enemy ran into a snake body.' )
+            score = score + 2147483647
+        end
+    end
 
     -- My win/loss conditions
     if #my_moves == 0 then
         log( DEBUG, 'I am trapped.' )
         return -2147483648
     end
-    if state[ 'me' ][ 'health' ] < 0 then
+    if state[ 'me' ][ 'health' ] <= 0 then
         log( DEBUG, 'I am out of health.' )
         return -2147483648
     end
@@ -158,7 +227,7 @@ local function heuristic( grid, state, my_moves, enemy_moves )
         log( DEBUG, 'Enemy is trapped.' )
         score = score + 2147483647
     end
-    if state[ 'enemy' ][ 'health' ] < 0 then
+    if state[ 'enemy' ][ 'health' ] <= 0 then
         log( DEBUG, 'Enemy is out of health.' )
         score = score + 2147483647
     end
@@ -332,12 +401,8 @@ function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMo
         
         -- short circuit win/loss conditions
         #moves == 0 or
-        state[ 'me' ][ 'health' ] < 0 or
-        state[ 'enemy' ][ 'health' ] < 0 or
-        (
-            state[ 'me' ][ 'body' ][ 'data' ][1][ 'x' ] == state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'x' ]
-            and state[ 'me' ][ 'body' ][ 'data' ][1][ 'y' ] == state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'y' ]
-        )
+        state[ 'me' ][ 'health' ] <= 0 or
+        state[ 'enemy' ][ 'health' ] <= 0
     then
         if depth == MAX_RECURSION_DEPTH then
             log( DEBUG, 'Reached MAX_RECURSION_DEPTH.' )
@@ -345,6 +410,62 @@ function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMo
             log( DEBUG, 'Reached endgame state.' )
         end
         return heuristic( grid, state, my_moves, enemy_moves )
+    end
+    
+    
+    if HEAD_ON_NECK_DETECTION == true then
+        if (
+            -- We can only consider a head-on-head collision if we've executed both player's moves in minimax!
+            depth % 2 == 0
+            and state[ 'me' ][ 'body' ][ 'data' ][1][ 'x' ] == state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'x' ]
+            and state[ 'me' ][ 'body' ][ 'data' ][1][ 'y' ] == state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'y' ]
+        ) or
+        (
+            -- We can only consider a head-on-neck collision if we've executed both player's moves in minimax!
+            depth % 2 == 0
+            and state[ 'me' ][ 'body' ][ 'data' ][1][ 'x' ] == state[ 'enemy' ][ 'body' ][ 'data' ][2][ 'x' ]
+            and state[ 'me' ][ 'body' ][ 'data' ][1][ 'y' ] == state[ 'enemy' ][ 'body' ][ 'data' ][2][ 'y' ]
+            and state[ 'me' ][ 'body' ][ 'data' ][2][ 'x' ] == state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'x' ]
+            and state[ 'me' ][ 'body' ][ 'data' ][2][ 'y' ] == state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'y' ]
+        )
+        then
+            log( DEBUG, 'Reached endgame state.' )
+            return heuristic( grid, state, my_moves, enemy_moves )
+        end
+        
+        if depth % 2 == 0 then
+            for k, v in ipairs( state[ 'enemy' ][ 'body' ][ 'data' ] ) do
+                if state[ 'me' ][ 'body' ][ 'data' ][1][ 'x' ] == v[ 'x' ] and state[ 'me' ][ 'body' ][ 'data' ][1][ 'y' ] == v[ 'y' ] then
+                    log( DEBUG, 'Reached endgame state.' )
+                    return heuristic( grid, state, my_moves, enemy_moves )
+                end
+                if k > 1 and state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'x' ] == v[ 'x' ] and state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'y' ] == v[ 'y' ] then
+                    log( DEBUG, 'Reached endgame state.' )
+                    return heuristic( grid, state, my_moves, enemy_moves )
+                end
+            end
+            
+            for k, v in ipairs( state[ 'me' ][ 'body' ][ 'data' ] ) do
+                if state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'x' ] == v[ 'x' ] and state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'y' ] == v[ 'y' ] then
+                    log( DEBUG, 'Reached endgame state.' )
+                    return heuristic( grid, state, my_moves, enemy_moves )
+                end
+                if k > 1 and state[ 'me' ][ 'body' ][ 'data' ][1][ 'x' ] == v[ 'x' ] and state[ 'me' ][ 'body' ][ 'data' ][1][ 'y' ] == v[ 'y' ] then
+                    log( DEBUG, 'Reached endgame state.' )
+                    return heuristic( grid, state, my_moves, enemy_moves )
+                end
+            end
+        end
+        
+    else
+        if (
+            state[ 'me' ][ 'body' ][ 'data' ][1][ 'x' ] == state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'x' ]
+            and state[ 'me' ][ 'body' ][ 'data' ][1][ 'y' ] == state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'y' ]
+        )
+        then
+            log( DEBUG, 'Reached endgame state.' )
+            return heuristic( grid, state, my_moves, enemy_moves )
+        end
     end
   
     if maximizingPlayer then
