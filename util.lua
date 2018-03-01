@@ -38,18 +38,23 @@ end
 ]]
 
 
---- I'M A BELIEBER
--- @return a random quote from Justin Bieber
-function util.bieberQuote()
-    local bieberquotes = {
-        "I make mistakes growing up. I'm not perfect; I'm not a robot. -Justin Bieber",
-        "I'm crazy, I'm nuts. Just the way my brain works. I'm not normal. I think differently. -Justin Bieber",
-        "Friends are the best to turn to when you're having a rough day. -Justin Bieber",
-        "I leave the hip thrusts to Michael Jackson. -Justin Bieber",
-        "It's cool when fans spend so much time making things for me. It means a lot. -Justin Bieber",
-        "No one can stop me. -Justin Bieber"
+--- Generates insults. Those less or eq to 40 characters
+-- are readable on the official game board.
+-- @return a random insult
+function util.taunt()
+    local taunts = {
+	"You are better at only one thing. Dying.",
+        "Are you a CEO for equifax?",
+        "Your snake is a little ssssssssssssucky.",
+        "You are impossible to underestimate.",
+        "You ninnyhammer.",
+        "May your foot be itchy and arms short.",
+        "Tech yourself before you wreck yourself",
+        "Hey Dad, can you do THIS?",
+        "Still better than Aleksiy's snake.",
+        "Justin Bieber? Sorry, I ate him."
     }
-    return bieberquotes[ random( #bieberquotes ) ]
+    return taunts[ random( #taunts ) ]
 end
 
 
