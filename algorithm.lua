@@ -52,7 +52,7 @@ end
 -- @param string v The value of a particular tile on the grid
 -- @return boolean
 local function isSafeSquareFloodfill( v )
-    return v == '.' or v == 'O'
+    return v == '.' or v == 'O' or v == '*'
 end
 
 
