@@ -48,7 +48,7 @@ A blog post that talks about the strategy in depth is here: *TBD*
 1. Download and install [OpenResty](http://openresty.org/).
 2. Using LuaRocks, install `cjson` which is a mandatory dependency: `/usr/share/luajit/bin/luarocks install cjson`
 3. Symlink `config/http.conf` into the `/etc/nginx/conf.d` directory.
-4. Symlink `config/server.conf` into the `/etc/nginx/sites-enabled` directory (and remove anything else in that directory).
+4. Symlink `config/server.dev.conf` into the `/etc/nginx/sites-enabled` directory (and remove anything else in that directory).
 5. Restart the nginx process and give the snake a try!
 
 Or if that sounds like too much work, you can use [Mojave](https://github.com/smallsco/mojave) which contains a built-in copy of Robosnake, no assembly required. (Mojave with Son of Robosnake will be released post-event).
