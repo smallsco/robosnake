@@ -15,10 +15,10 @@ Son of Robosnake (SoR) is [Redbrick](http://www.rdbrck.com)'s bounty snake entry
 Our win conditions to claim the bounty are the following:
 * Game is played on a 17 x 17 board
 * 10 food are present on the board, at any given time
-* API timeout of 1 second
+* API timeout of 200 milliseconds
 * One-versus-one, last snake slithering wins the bounty.
 
-Under these conditions, we won 71 games and lost 3, for a total win record of 71/74 or 96%.
+Under these conditions, we won seventy-one games and lost three, for a total win record of 71/74 or 96%.
 
 
 ## Strategy
