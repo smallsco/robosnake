@@ -18,7 +18,7 @@ Our win conditions to claim the bounty are the following:
 * API timeout of 1 second
 * One-versus-one, last snake slithering wins the bounty.
 
-Under these conditions, we won *TBD* games and lost *TBD*, for a total win record of *TBD* or *TBD*%.
+Under these conditions, we won 71 games and lost 3, for a total win record of 71/74 or 96%.
 
 
 ## Strategy
