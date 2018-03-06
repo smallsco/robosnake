@@ -51,7 +51,7 @@ A blog post that talks about the strategy in depth is here: *TBD*
 4. Symlink `config/server.dev.conf` into the `/etc/nginx/sites-enabled` directory (and remove anything else in that directory).
 5. Restart the nginx process and give the snake a try!
 
-Or if that sounds like too much work, you can use [Mojave](https://github.com/smallsco/mojave) which contains a built-in copy of Robosnake, no assembly required. (Mojave with Son of Robosnake will be released post-event).
+Or if that sounds like too much work, you can use [Mojave](https://github.com/smallsco/mojave) which contains a built-in copy of Son of Robosnake, no assembly required.
 
 
 ## Configuration
