@@ -41,7 +41,7 @@ In the event that we're playing in an arena containing more than one enemy snake
 
 In the event that we're playing in an empty arena, SoR will choose *itself* as the "enemy". This will often lead to hilarity.
 
-A blog post that talks about the strategy in depth is here: *TBD*
+A blog post that talks about the strategy in depth is here: https://rdbrck.com/2018/03/son-robosnake-aggressive-bounty-snake/
 
 
 ## How to Run
