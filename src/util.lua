@@ -151,7 +151,8 @@ end
 
 --- Prints the grid as an ASCII representation of the world map
 -- @param grid The game grid
-function util.printWorldMap( grid )
+function util.printWorldMap( grid, log_level )
+    if not log_level then log_level = DEBUG end
     local str = "\n"
     for y = 1, #grid do
         for x = 1, #grid[ y ] do
@@ -161,7 +162,7 @@ function util.printWorldMap( grid )
             str = str .. "\n"
         end
     end
-    log( DEBUG, str )
+    log( log_level, str )
 end
 
 

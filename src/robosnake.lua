@@ -60,7 +60,7 @@ end
 
 log( DEBUG, 'Building World Map' )
 local grid = util.buildWorldMap( gameState )
-util.printWorldMap( grid )
+util.printWorldMap( grid, INFO )
 
 
 -- This snake makes use of alpha-beta pruning to advance the gamestate
@@ -74,40 +74,94 @@ end
 
 -- Convenience vars
 local me = gameState[ 'you' ]
+local possibleEnemies = {}
 local enemy = nil
-local distance = 99999
+local shortestDistance = 99999
 for i = 1, #gameState[ 'board' ][ 'snakes' ] do
     if gameState[ 'board' ][ 'snakes' ][ i ][ 'id' ] ~= me[ 'id' ] then
         local d = mdist(
             me[ 'body' ][1],
             gameState[ 'board' ][ 'snakes' ][ i ][ 'body' ][1]
         )
-        if d < distance then
-            distance = d
-            enemy = gameState[ 'board' ][ 'snakes' ][ i ]
+        if d == shortestDistance then
+            table.insert( possibleEnemies, gameState[ 'board' ][ 'snakes' ][ i ] )
+        elseif d < shortestDistance then
+            shortestDistance = d
+            possibleEnemies = { gameState[ 'board' ][ 'snakes' ][ i ] }
         end
     end
 end
 
--- This is just to keep from crashing if we're testing in an arena by ourselves
--- though I am curious to see what will happen when trying to predict my own behavior!
-if not enemy then
+if #possibleEnemies > 1 then
+    -- There's more than one snake that's an equal distance from me!! So let's pick the longest snake.
+    log( INFO, "WARNING: Multiple enemies with an equal distance to me. Choosing longest enemy for behavior prediction." )
+    local longestLength = 0
+    local newPossibleEnemies = {}
+    log( INFO, string.format("%s %s", me[ 'name' ], #me[ 'body' ]) )
+    for i = 1, #possibleEnemies do
+        log( INFO, string.format("%s %s", possibleEnemies[i][ 'name' ], #possibleEnemies[i][ 'body' ]) )
+        if #possibleEnemies[i][ 'body' ] == longestLength then
+            table.insert( newPossibleEnemies, possibleEnemies[i] )
+        elseif #possibleEnemies[i][ 'body' ] > longestLength then
+            longestLength = #possibleEnemies[i][ 'body' ]
+            newPossibleEnemies = { possibleEnemies[i] }
+        end
+    end
+    if #newPossibleEnemies == 1 then
+        -- We've successfully reduced the number of targets to just one!
+        enemy = newPossibleEnemies[1]
+    else
+        log( INFO, "CRITICAL: Multiple enemies with an equal distance to me and equal length. ABANDONING BEHAVIOR PREDICTION." )
+        enemy = nil
+    end
+elseif #possibleEnemies == 1 then
+    -- There's just one snake on the board that's closer to me than any other snake
+    enemy = possibleEnemies[1]
+else
+    -- This is just to keep from crashing if we're testing in an arena by ourselves
+    -- though I am curious to see what will happen when trying to predict my own behavior!
     log( DEBUG, "WARNING: I am the only snake in the game! Using MYSELF for behavior prediction." )
     enemy = me
 end
 
-log( DEBUG, 'Enemy Snake: ' .. enemy[ 'name' ] )
-local myState = {
-    me = me,
-    enemy = enemy
-}
 
 -- Alpha-Beta Pruning algorithm
 -- This is significantly faster than minimax on a single processor, but very challenging to parallelize
-local bestScore, bestMove = algorithm.alphabeta( grid, myState, 0, -math.huge, math.huge, nil, nil, true, {}, {} )
-log( DEBUG, string.format( 'Best score: %s', bestScore ) )
-if bestMove then
-    log( DEBUG, string.format( 'Best move: [%s,%s]', bestMove[ 'x' ], bestMove[ 'y' ] ) )
+local bestMove = nil
+local bestScore = nil
+if enemy then
+    
+    log( INFO, 'Enemy Snake: ' .. enemy[ 'name' ] )
+    local myState = {
+        me = me,
+        enemy = enemy,
+        numSnakes = #gameState[ 'board' ][ 'snakes' ]
+    }
+    local abgrid = util.buildWorldMap( gameState )
+    
+    -- update grid to block off any space that a larger snake other than me or enemy
+    -- could possibly move into (assume equal sized snakes will try to avoid us)
+    for i = 1, #gameState[ 'board' ][ 'snakes' ] do
+        if gameState[ 'board' ][ 'snakes' ][ i ][ 'id' ] ~= me[ 'id' ]
+           and gameState[ 'board' ][ 'snakes' ][ i ][ 'id' ] ~= enemy[ 'id' ]
+        then
+            if #gameState[ 'board' ][ 'snakes' ][ i ][ 'body' ] > #me[ 'body' ] then
+                local moves = neighbours( gameState[ 'board' ][ 'snakes' ][ i ][ 'body' ][1], grid )
+                for j = 1, #moves do
+                    abgrid[ moves[j][ 'y' ] ][ moves[j][ 'x' ] ] = '?'
+                end
+            end
+        end
+    end
+    
+    util.printWorldMap( abgrid, INFO )
+    
+    bestScore, bestMove = algorithm.alphabeta( abgrid, myState, 0, -math.huge, math.huge, nil, nil, true, {}, {} )
+    log( DEBUG, string.format( 'Best score: %s', bestScore ) )
+    if bestMove then
+        log( DEBUG, string.format( 'Best move: [%s,%s]', bestMove[ 'x' ], bestMove[ 'y' ] ) )
+    end
+    
 end
 
 -- FAILSAFE #1
@@ -118,31 +172,36 @@ end
 -- max recursion depth we are able to break free (i.e. trapped by the enemy's tail which
 -- later gets out of the way)
 if not bestMove then
-    log( DEBUG, "WARNING: No move returned from alphabeta!" )
-    local my_moves = neighbours( myState[ 'me' ][ 'body' ][1], grid )
-    local enemy_moves = neighbours( myState[ 'enemy' ][ 'body' ][1], grid )
-    local safe_moves = util.n_complement( my_moves, enemy_moves )
+    log( INFO, "WARNING: No move returned from alphabeta!" )
+    local my_moves = neighbours( me[ 'body' ][1], grid )
+    local safe_moves = neighbours( me[ 'body' ][1], grid )
     
-    if #myState[ 'me' ][ 'body' ] <= #myState[ 'enemy' ][ 'body' ] and #safe_moves > 0 then
-        -- We're smaller than the enemy and there's one or more safe squares (a square that
-        -- we can reach and the enemy can not) available - prefer those squares.
-        log( DEBUG, "Moving to a random safe neighbour." )
-        my_moves = safe_moves
-    else
-        -- We're _larger_ than the enemy, or we're smaller but there are no safe squares
-        -- available - we may end up in a head-on-head collision.
-        log( DEBUG, "Moving to a random free neighbour." )
+    -- safe moves are squares where we can move into that a
+    -- larger or equal sized enemy cannot move into
+    for i = 1, #gameState[ 'board' ][ 'snakes' ] do
+        if gameState[ 'board' ][ 'snakes' ][ i ][ 'id' ] ~= me[ 'id' ] then
+            if #gameState[ 'board' ][ 'snakes' ][ i ][ 'body' ] >= #me[ 'body' ] then
+                local enemy_moves = neighbours( gameState[ 'board' ][ 'snakes' ][ i ][ 'body' ][1], grid )
+                safe_moves = util.n_complement( safe_moves, enemy_moves )
+            end
+        end
     end
     
-    if #my_moves > 0 then
-        -- Move to any square that _may_ give us a chance of living.
+    if #safe_moves > 0 then
+        -- FIXME: use floodfill instead of picking randomly
+        log( INFO, "Moving to a random safe neighbour." )
+        bestMove = safe_moves[ math.random( #safe_moves ) ]
+    elseif #my_moves > 0 then
+        -- We're _larger_ than the enemy, or we're smaller but there are no safe squares
+        -- available - we may end up in a head-on-head collision.
+        log( INFO, "Moving to a random free neighbour." )
         bestMove = my_moves[ math.random( #my_moves ) ]
     else
         -- If we reach this point, there isn't anywhere safe to move to and we're going to die.
         -- This just prefers snake deaths over wall deaths, so that the official battlesnake
         -- unit tests pass.
-        log( DEBUG, "FATAL: No free neighbours. I'm going to die. Trying to avoid a wall..." )
-        my_moves = neighbours( myState[ 'me' ][ 'body' ][1], grid, true )
+        log( INFO, "FATAL: No free neighbours. I'm going to die. Trying to avoid a wall..." )
+        my_moves = neighbours( me[ 'body' ][1], grid, true )
         bestMove = my_moves[ math.random( #my_moves ) ]
     end
 end
@@ -151,13 +210,13 @@ end
 -- We're dead. This only exists to ensure that we always return a valid JSON response
 -- to the game board. It always goes left.
 if not bestMove then
-    log( DEBUG, "FATAL: Wall collision unavoidable. I'm going to die. Moving left!" )
+    log( INFO, "FATAL: Wall collision unavoidable. I'm going to die. Moving left!" )
     bestMove = { x = me[ 'body' ][1][ 'x' ] - 1, y = me[ 'body' ][1][ 'y' ] }
 end
 
 -- Move to the destination we decided on
 local dir = util.direction( me[ 'body' ][1], bestMove )
-log( DEBUG, string.format( 'Decision: Moving %s to [%s,%s]', dir, bestMove[ 'x' ], bestMove[ 'y' ] ) )
+log( INFO, string.format( 'Decision: Moving %s to [%s,%s]', dir, bestMove[ 'x' ], bestMove[ 'y' ] ) )
 
 
 -- Return response to the arena
