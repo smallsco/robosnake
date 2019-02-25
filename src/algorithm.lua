@@ -94,14 +94,14 @@ local function heuristic( grid, state, my_moves, enemy_moves )
 
     -- Handle head-on-head collisions.
     if
-        state[ 'me' ][ 'body' ][ 'data' ][1][ 'x' ] == state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'x' ]
-        and state[ 'me' ][ 'body' ][ 'data' ][1][ 'y' ] == state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'y' ]
+        state[ 'me' ][ 'body' ][1][ 'x' ] == state[ 'enemy' ][ 'body' ][1][ 'x' ]
+        and state[ 'me' ][ 'body' ][1][ 'y' ] == state[ 'enemy' ][ 'body' ][1][ 'y' ]
     then
         log( DEBUG, 'Head-on-head collision!' )
-        if #state[ 'me' ][ 'body' ][ 'data' ] > #state[ 'enemy' ][ 'body' ][ 'data' ] then
+        if #state[ 'me' ][ 'body' ] > #state[ 'enemy' ][ 'body' ] then
             log( DEBUG, 'I am bigger and win!' )
             score = score + 2147483647
-        elseif #state[ 'me' ][ 'body' ][ 'data' ] < #state[ 'enemy' ][ 'body' ][ 'data' ] then
+        elseif #state[ 'me' ][ 'body' ] < #state[ 'enemy' ][ 'body' ] then
             log( DEBUG, 'I am smaller and lose.' )
             return -2147483648
         else
@@ -140,14 +140,14 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     -- 1) How many squares can I reach from this position?
     -- 2) What percentage of the board does that represent?
     local floodfill_grid = deepcopy( grid )
-    floodfill_grid[ state[ 'me' ][ 'body' ][ 'data' ][1][ 'y' ] ][ state[ 'me' ][ 'body' ][ 'data' ][1][ 'x' ] ] = '.'
-    local floodfill_depth = ( 2 * #state[ 'me' ][ 'body' ][ 'data' ] ) + #food
-    local accessible_squares = floodfill( state[ 'me' ][ 'body' ][ 'data' ][1], floodfill_grid, 0, floodfill_depth )
+    floodfill_grid[ state[ 'me' ][ 'body' ][1][ 'y' ] ][ state[ 'me' ][ 'body' ][1][ 'x' ] ] = '.'
+    local floodfill_depth = ( 2 * #state[ 'me' ][ 'body' ] ) + #food
+    local accessible_squares = floodfill( state[ 'me' ][ 'body' ][1], floodfill_grid, 0, floodfill_depth )
     local percent_accessible = accessible_squares / ( #grid * #grid[1] )
     
     -- If the number of squares I can see from my current position is less than my length
     -- then moving to this position *may* trap and kill us, and should be avoided if possible
-    if accessible_squares <= #state[ 'me' ][ 'body' ][ 'data' ] then
+    if accessible_squares <= #state[ 'me' ][ 'body' ] then
         log( DEBUG, 'I smell a trap!' )
         return -9999999 * ( 1 / percent_accessible )
     end
@@ -167,14 +167,14 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     -- 1) How many squares can the enemy reach from this position?
     -- 2) What percentage of the board does that represent?
     local enemy_floodfill_grid = deepcopy( grid )
-    enemy_floodfill_grid[ state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'y' ] ][ state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'x' ] ] = '.'
-    local enemy_floodfill_depth = ( 2 * #state[ 'enemy' ][ 'body' ][ 'data' ] ) + #food
-    local enemy_accessible_squares = floodfill( state[ 'enemy' ][ 'body' ][ 'data' ][1], enemy_floodfill_grid, 0, enemy_floodfill_depth )
+    enemy_floodfill_grid[ state[ 'enemy' ][ 'body' ][1][ 'y' ] ][ state[ 'enemy' ][ 'body' ][1][ 'x' ] ] = '.'
+    local enemy_floodfill_depth = ( 2 * #state[ 'enemy' ][ 'body' ] ) + #food
+    local enemy_accessible_squares = floodfill( state[ 'enemy' ][ 'body' ][1], enemy_floodfill_grid, 0, enemy_floodfill_depth )
     local enemy_percent_accessible = enemy_accessible_squares / ( #grid * #grid[1] )
     
     -- If the number of squares the enemy can see from their current position is less than their length
     -- then moving to this position *may* trap and kill them, and should be avoided if possible
-    if enemy_accessible_squares <= #state[ 'enemy' ][ 'body' ][ 'data' ] then
+    if enemy_accessible_squares <= #state[ 'enemy' ][ 'body' ] then
         log( DEBUG, 'Enemy might be trapped!' )
         score = score + 9999999
     end
@@ -185,14 +185,14 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     if #food <= LOW_FOOD then
         foodWeight = 200 - ( 2 * state[ 'me' ][ 'health' ] )
     else
-        if state[ 'me' ][ 'health' ] <= HUNGER_HEALTH or #state[ 'me' ][ 'body' ][ 'data' ] < 4 then
+        if state[ 'me' ][ 'health' ] <= HUNGER_HEALTH or #state[ 'me' ][ 'body' ] < 4 then
             foodWeight = 100 - state[ 'me' ][ 'health' ]
         end
     end
     log( DEBUG, 'Food Weight: ' .. foodWeight )
     if foodWeight > 0 then
         for i = 1, #food do
-            local dist = mdist( state[ 'me' ][ 'body' ][ 'data' ][1], food[i] )
+            local dist = mdist( state[ 'me' ][ 'body' ][1], food[i] )
             -- "i" is used in the score so that two pieces of food that 
             -- are equal distance from me do not have identical weighting
             score = score - ( dist * foodWeight ) - i
@@ -205,11 +205,11 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     if #food <= LOW_FOOD then
         aggressiveWeight = state[ 'me' ][ 'health' ]
     end
-    local kill_squares = algorithm.neighbours( state[ 'enemy' ][ 'body' ][ 'data' ][1], grid )
-    local enemy_last_direction = util.direction( state[ 'enemy' ][ 'body' ][ 'data' ][2], state[ 'enemy' ][ 'body' ][ 'data' ][1] )
+    local kill_squares = algorithm.neighbours( state[ 'enemy' ][ 'body' ][1], grid )
+    local enemy_last_direction = util.direction( state[ 'enemy' ][ 'body' ][2], state[ 'enemy' ][ 'body' ][1] )
     for i = 1, #kill_squares do
-        local dist = mdist( state[ 'me' ][ 'body' ][ 'data' ][1], kill_squares[i] )
-        local direction = util.direction( state[ 'enemy' ][ 'body' ][ 'data' ][1], kill_squares[i] )
+        local dist = mdist( state[ 'me' ][ 'body' ][1], kill_squares[i] )
+        local direction = util.direction( state[ 'enemy' ][ 'body' ][1], kill_squares[i] )
         if direction == enemy_last_direction then
             score = score - ( dist * ( 2 * aggressiveWeight ) )
             log( DEBUG, string.format( 'Prime head target [%s,%s], distance %s, score %s', kill_squares[i][ 'x' ], kill_squares[i][ 'y' ], dist, dist * ( 2 * aggressiveWeight ) ) )
@@ -221,10 +221,10 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     
     -- Avoid the edge of the game board
     if
-        state[ 'me' ][ 'body' ][ 'data' ][1][ 'x' ] == 1
-        or state[ 'me' ][ 'body' ][ 'data' ][1][ 'x' ] == #grid[1]
-        or state[ 'me' ][ 'body' ][ 'data' ][1][ 'y' ] == 1
-        or state[ 'me' ][ 'body' ][ 'data' ][1][ 'y' ] == #grid
+        state[ 'me' ][ 'body' ][1][ 'x' ] == 1
+        or state[ 'me' ][ 'body' ][1][ 'x' ] == #grid[1]
+        or state[ 'me' ][ 'body' ][1][ 'y' ] == 1
+        or state[ 'me' ][ 'body' ][1][ 'y' ] == #grid
     then
         score = score - 25000
     end
@@ -233,7 +233,7 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     -- Temporarily Disabled
     --[[local center_x = math.ceil( #grid[1] / 2 )
     local center_y = math.ceil( #grid / 2 )
-    local dist = mdist( state[ 'me' ][ 'body' ][ 'data' ][1], { x = center_x, y = center_y } )
+    local dist = mdist( state[ 'me' ][ 'body' ][1], { x = center_x, y = center_y } )
     score = score - (dist * 100)
     log( DEBUG, string.format('Center distance %s, score %s', dist, dist*100 ) )]]
     
@@ -311,20 +311,20 @@ function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMo
     log( DEBUG, 'Depth: ' .. depth )
 
     local moves = {}
-    local my_moves = algorithm.neighbours( state[ 'me' ][ 'body' ][ 'data' ][1], grid )
+    local my_moves = algorithm.neighbours( state[ 'me' ][ 'body' ][1], grid )
     local enemy_moves = {}
     if maximizingPlayer then
-        enemy_moves = algorithm.neighbours( state[ 'enemy' ][ 'body' ][ 'data' ][1], grid )
+        enemy_moves = algorithm.neighbours( state[ 'enemy' ][ 'body' ][1], grid )
     else
         enemy_moves = prev_enemy_moves
     end
     
     if maximizingPlayer then
         moves = my_moves
-        log( DEBUG, string.format( 'My Turn. Position: %s Possible moves: %s', prettyCoords( state[ 'me' ][ 'body' ][ 'data' ] ), prettyCoords( moves ) ) )
+        log( DEBUG, string.format( 'My Turn. Position: %s Possible moves: %s', prettyCoords( state[ 'me' ][ 'body' ] ), prettyCoords( moves ) ) )
     else
         moves = enemy_moves
-        log( DEBUG, string.format( 'Enemy Turn. Position: %s Possible moves: %s', prettyCoords( state[ 'enemy' ][ 'body' ][ 'data' ] ), prettyCoords( moves ) ) )
+        log( DEBUG, string.format( 'Enemy Turn. Position: %s Possible moves: %s', prettyCoords( state[ 'enemy' ][ 'body' ] ), prettyCoords( moves ) ) )
     end
     
     if
@@ -335,8 +335,8 @@ function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMo
         state[ 'me' ][ 'health' ] <= 0 or
         state[ 'enemy' ][ 'health' ] <= 0 or
         (
-            state[ 'me' ][ 'body' ][ 'data' ][1][ 'x' ] == state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'x' ]
-            and state[ 'me' ][ 'body' ][ 'data' ][1][ 'y' ] == state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'y' ]
+            state[ 'me' ][ 'body' ][1][ 'x' ] == state[ 'enemy' ][ 'body' ][1][ 'x' ]
+            and state[ 'me' ][ 'body' ][1][ 'y' ] == state[ 'enemy' ][ 'body' ][1][ 'y' ]
         )
     then
         if depth == MAX_RECURSION_DEPTH then
@@ -365,55 +365,55 @@ function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMo
             end
             
             -- remove tail from map ONLY if not growing
-            local length = #new_state[ 'me' ][ 'body' ][ 'data' ]
+            local length = #new_state[ 'me' ][ 'body' ]
             if
               length > 1
               and
               (
-                new_state[ 'me' ][ 'body' ][ 'data' ][ length ][ 'x' ] == new_state[ 'me' ][ 'body' ][ 'data' ][ length - 1 ][ 'x' ]
-                and new_state[ 'me' ][ 'body' ][ 'data' ][ length ][ 'y' ] == new_state[ 'me' ][ 'body' ][ 'data' ][ length - 1 ][ 'y' ]
+                new_state[ 'me' ][ 'body' ][ length ][ 'x' ] == new_state[ 'me' ][ 'body' ][ length - 1 ][ 'x' ]
+                and new_state[ 'me' ][ 'body' ][ length ][ 'y' ] == new_state[ 'me' ][ 'body' ][ length - 1 ][ 'y' ]
               )
             then
                 -- do nothing
             else
-                new_grid[ new_state[ 'me' ][ 'body' ][ 'data' ][ length ][ 'y' ] ][ new_state[ 'me' ][ 'body' ][ 'data' ][ length ][ 'x' ] ] = '.'
+                new_grid[ new_state[ 'me' ][ 'body' ][ length ][ 'y' ] ][ new_state[ 'me' ][ 'body' ][ length ][ 'x' ] ] = '.'
             end
             
             -- always remove tail from state
-            table.remove( new_state[ 'me' ][ 'body' ][ 'data' ] )
+            table.remove( new_state[ 'me' ][ 'body' ] )
             
             -- move head in state and on grid
             if length > 1 then
-                new_grid[ new_state[ 'me' ][ 'body' ][ 'data' ][1][ 'y' ] ][ new_state[ 'me' ][ 'body' ][ 'data' ][1][ 'x' ] ] = '#'
+                new_grid[ new_state[ 'me' ][ 'body' ][1][ 'y' ] ][ new_state[ 'me' ][ 'body' ][1][ 'x' ] ] = '#'
             end
-            table.insert( new_state[ 'me' ][ 'body' ][ 'data' ], 1, moves[i] )
+            table.insert( new_state[ 'me' ][ 'body' ], 1, moves[i] )
             new_grid[ moves[i][ 'y' ] ][ moves[i][ 'x' ] ] = '@'
             
             -- if eating add to the snake's body
             if eating then
                 table.insert(
-                    new_state[ 'me' ][ 'body' ][ 'data' ],
+                    new_state[ 'me' ][ 'body' ],
                     {
-                        x = new_state[ 'me' ][ 'body' ][ 'data' ][ length ][ 'x' ],
-                        y = new_state[ 'me' ][ 'body' ][ 'data' ][ length ][ 'y' ]
+                        x = new_state[ 'me' ][ 'body' ][ length ][ 'x' ],
+                        y = new_state[ 'me' ][ 'body' ][ length ][ 'y' ]
                     }
                 )
                 eating = false
             end
             
             -- mark if the tail is a safe square or not
-            local length = #new_state[ 'me' ][ 'body' ][ 'data' ]
+            local length = #new_state[ 'me' ][ 'body' ]
             if
               length > 1
               and
               (
-                new_state[ 'me' ][ 'body' ][ 'data' ][ length ][ 'x' ] == new_state[ 'me' ][ 'body' ][ 'data' ][ length - 1 ][ 'x' ]
-                and new_state[ 'me' ][ 'body' ][ 'data' ][ length ][ 'y' ] == new_state[ 'me' ][ 'body' ][ 'data' ][ length - 1 ][ 'y' ]
+                new_state[ 'me' ][ 'body' ][ length ][ 'x' ] == new_state[ 'me' ][ 'body' ][ length - 1 ][ 'x' ]
+                and new_state[ 'me' ][ 'body' ][ length ][ 'y' ] == new_state[ 'me' ][ 'body' ][ length - 1 ][ 'y' ]
               )
             then
-                new_grid[ new_state[ 'me' ][ 'body' ][ 'data' ][ length ][ 'y' ] ][ new_state[ 'me' ][ 'body' ][ 'data' ][ length ][ 'x' ] ] = '#'
+                new_grid[ new_state[ 'me' ][ 'body' ][ length ][ 'y' ] ][ new_state[ 'me' ][ 'body' ][ length ][ 'x' ] ] = '#'
             else
-                new_grid[ new_state[ 'me' ][ 'body' ][ 'data' ][ length ][ 'y' ] ][ new_state[ 'me' ][ 'body' ][ 'data' ][ length ][ 'x' ] ] = '*'
+                new_grid[ new_state[ 'me' ][ 'body' ][ length ][ 'y' ] ][ new_state[ 'me' ][ 'body' ][ length ][ 'x' ] ] = '*'
             end
             
             printWorldMap( new_grid )
@@ -444,55 +444,55 @@ function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMo
             end
             
             -- remove tail from map ONLY if not growing
-            local length = #new_state[ 'enemy' ][ 'body' ][ 'data' ]
+            local length = #new_state[ 'enemy' ][ 'body' ]
             if
               length > 1
               and
               (
-                new_state[ 'enemy' ][ 'body' ][ 'data' ][ length ][ 'x' ] == new_state[ 'enemy' ][ 'body' ][ 'data' ][ length - 1 ][ 'x' ]
-                and new_state[ 'enemy' ][ 'body' ][ 'data' ][ length ][ 'y' ] == new_state[ 'enemy' ][ 'body' ][ 'data' ][ length - 1 ][ 'y' ]
+                new_state[ 'enemy' ][ 'body' ][ length ][ 'x' ] == new_state[ 'enemy' ][ 'body' ][ length - 1 ][ 'x' ]
+                and new_state[ 'enemy' ][ 'body' ][ length ][ 'y' ] == new_state[ 'enemy' ][ 'body' ][ length - 1 ][ 'y' ]
               )
             then
                 -- do nothing
             else
-                new_grid[ new_state[ 'enemy' ][ 'body' ][ 'data' ][ length ][ 'y' ] ][ new_state[ 'enemy' ][ 'body' ][ 'data' ][ length ][ 'x' ] ] = '.'
+                new_grid[ new_state[ 'enemy' ][ 'body' ][ length ][ 'y' ] ][ new_state[ 'enemy' ][ 'body' ][ length ][ 'x' ] ] = '.'
             end
             
             -- always remove tail from state
-            table.remove( new_state[ 'enemy' ][ 'body' ][ 'data' ] )
+            table.remove( new_state[ 'enemy' ][ 'body' ] )
             
             -- move head in state and on grid
             if length > 1 then
-                new_grid[ new_state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'y' ] ][ new_state[ 'enemy' ][ 'body' ][ 'data' ][1][ 'x' ] ] = '#'
+                new_grid[ new_state[ 'enemy' ][ 'body' ][1][ 'y' ] ][ new_state[ 'enemy' ][ 'body' ][1][ 'x' ] ] = '#'
             end
-            table.insert( new_state[ 'enemy' ][ 'body' ][ 'data' ], 1, moves[i] )
+            table.insert( new_state[ 'enemy' ][ 'body' ], 1, moves[i] )
             new_grid[ moves[i][ 'y' ] ][ moves[i][ 'x' ] ] = '@'
             
             -- if eating add to the snake's body
             if eating then
                 table.insert(
-                    new_state[ 'enemy' ][ 'body' ][ 'data' ],
+                    new_state[ 'enemy' ][ 'body' ],
                     {
-                        x = new_state[ 'enemy' ][ 'body' ][ 'data' ][ length ][ 'x' ],
-                        y = new_state[ 'enemy' ][ 'body' ][ 'data' ][ length ][ 'y' ]
+                        x = new_state[ 'enemy' ][ 'body' ][ length ][ 'x' ],
+                        y = new_state[ 'enemy' ][ 'body' ][ length ][ 'y' ]
                     }
                 )
                 eating = false
             end
             
             -- mark if the tail is a safe square or not
-            local length = #new_state[ 'enemy' ][ 'body' ][ 'data' ]
+            local length = #new_state[ 'enemy' ][ 'body' ]
             if
               length > 1
               and
               (
-                new_state[ 'enemy' ][ 'body' ][ 'data' ][ length ][ 'x' ] == new_state[ 'enemy' ][ 'body' ][ 'data' ][ length - 1 ][ 'x' ]
-                and new_state[ 'enemy' ][ 'body' ][ 'data' ][ length ][ 'y' ] == new_state[ 'enemy' ][ 'body' ][ 'data' ][ length - 1 ][ 'y' ]
+                new_state[ 'enemy' ][ 'body' ][ length ][ 'x' ] == new_state[ 'enemy' ][ 'body' ][ length - 1 ][ 'x' ]
+                and new_state[ 'enemy' ][ 'body' ][ length ][ 'y' ] == new_state[ 'enemy' ][ 'body' ][ length - 1 ][ 'y' ]
               )
             then
-                new_grid[ new_state[ 'enemy' ][ 'body' ][ 'data' ][ length ][ 'y' ] ][ new_state[ 'enemy' ][ 'body' ][ 'data' ][ length ][ 'x' ] ] = '#'
+                new_grid[ new_state[ 'enemy' ][ 'body' ][ length ][ 'y' ] ][ new_state[ 'enemy' ][ 'body' ][ length ][ 'x' ] ] = '#'
             else
-                new_grid[ new_state[ 'enemy' ][ 'body' ][ 'data' ][ length ][ 'y' ] ][ new_state[ 'enemy' ][ 'body' ][ 'data' ][ length ][ 'x' ] ] = '*'
+                new_grid[ new_state[ 'enemy' ][ 'body' ][ length ][ 'y' ] ][ new_state[ 'enemy' ][ 'body' ][ length ][ 'x' ] ] = '*'
             end
             
             printWorldMap( new_grid )

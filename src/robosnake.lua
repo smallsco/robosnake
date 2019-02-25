@@ -1,18 +1,17 @@
 --[[
-                    _______  _____  __   _       _____  _______            
-                    |______ |     | | \  |      |     | |______            
-                    ______| |_____| |  \_|      |_____| |                  
-                                                                           
       ______  _____  ______   _____  _______ __   _ _______ _     _ _______
      |_____/ |     | |_____] |     | |______ | \  | |_____| |____/  |______
      |    \_ |_____| |_____] |_____| ______| |  \_| |     | |    \_ |______
                                                                            
+                    _______ _     _        _____ _____ _____               
+                    |  |  | |____/           |     |     |                 
+                    |  |  | |    \_ .      __|__ __|__ __|__               
+                                                                           
     -----------------------------------------------------------------------
     
-    @author Scott Small <scott.small@rdbrck.com>
-    @author Tyler Sebastian <tyler.sebastian@rdbrck.com>
-    @author Erika Burdon <erika.burdon@rdbrck.com>
+    @author Scott Small <smallsco@gmail.com>
     @copyright 2017-2018 Redbrick Technologies, Inc.
+    @copyright 2019 Scott Small
     @license MIT
 ]]
 
@@ -20,6 +19,8 @@
 -- Lua optimization: any functions from another module called more than once
 -- are faster if you create a local reference to that function.
 local DEBUG = ngx.DEBUG
+local INFO = ngx.INFO
+local NOTICE = ngx.NOTICE
 local log = ngx.log
 local mdist = util.mdist
 local neighbours = algorithm.neighbours
@@ -36,24 +37,25 @@ math.randomseed( os.time() )
 
 -- Get the POST request and decode the JSON
 local request_body = ngx.var.request_body
-log( DEBUG, 'Got request data: ' .. request_body )
 local gameState = cjson.decode( request_body )
+log( NOTICE, string.format('---TURN %s---', gameState['turn'] ) )
+log( NOTICE, 'Got request data: ' .. request_body )
 
 -- Convert to 1-based indexing
 log( DEBUG, 'Converting Coordinates' )
-for i = 1, #gameState[ 'food' ][ 'data' ] do
-    gameState[ 'food' ][ 'data' ][ i ][ 'x' ] = gameState[ 'food' ][ 'data' ][ i ][ 'x' ] + 1
-    gameState[ 'food' ][ 'data' ][ i ][ 'y' ] = gameState[ 'food' ][ 'data' ][ i ][ 'y' ] + 1
+for i = 1, #gameState[ 'board' ][ 'food' ] do
+    gameState[ 'board' ][ 'food' ][ i ][ 'x' ] = gameState[ 'board' ][ 'food' ][ i ][ 'x' ] + 1
+    gameState[ 'board' ][ 'food' ][ i ][ 'y' ] = gameState[ 'board' ][ 'food' ][ i ][ 'y' ] + 1
 end
-for i = 1, #gameState[ 'snakes' ][ 'data' ] do
-    for j = 1, #gameState[ 'snakes' ][ 'data' ][ i ][ 'body' ][ 'data' ] do
-        gameState[ 'snakes' ][ 'data' ][ i ][ 'body' ][ 'data' ][ j ][ 'x' ] = gameState[ 'snakes' ][ 'data' ][ i ][ 'body' ][ 'data' ][ j ][ 'x' ] + 1
-        gameState[ 'snakes' ][ 'data' ][ i ][ 'body' ][ 'data' ][ j ][ 'y' ] = gameState[ 'snakes' ][ 'data' ][ i ][ 'body' ][ 'data' ][ j ][ 'y' ] + 1
+for i = 1, #gameState[ 'board' ][ 'snakes' ] do
+    for j = 1, #gameState[ 'board' ][ 'snakes' ][ i ][ 'body' ] do
+        gameState[ 'board' ][ 'snakes' ][ i ][ 'body' ][ j ][ 'x' ] = gameState[ 'board' ][ 'snakes' ][ i ][ 'body' ][ j ][ 'x' ] + 1
+        gameState[ 'board' ][ 'snakes' ][ i ][ 'body' ][ j ][ 'y' ] = gameState[ 'board' ][ 'snakes' ][ i ][ 'body' ][ j ][ 'y' ] + 1
     end
 end
-for i = 1, #gameState[ 'you' ][ 'body' ][ 'data' ] do
-    gameState[ 'you' ][ 'body' ][ 'data' ][ i ][ 'x' ] = gameState[ 'you' ][ 'body' ][ 'data' ][ i ][ 'x' ] + 1
-    gameState[ 'you' ][ 'body' ][ 'data' ][ i ][ 'y' ] = gameState[ 'you' ][ 'body' ][ 'data' ][ i ][ 'y' ] + 1
+for i = 1, #gameState[ 'you' ][ 'body' ] do
+    gameState[ 'you' ][ 'body' ][ i ][ 'x' ] = gameState[ 'you' ][ 'body' ][ i ][ 'x' ] + 1
+    gameState[ 'you' ][ 'body' ][ i ][ 'y' ] = gameState[ 'you' ][ 'body' ][ i ][ 'y' ] + 1
 end
 
 log( DEBUG, 'Building World Map' )
@@ -66,7 +68,7 @@ util.printWorldMap( grid )
 -- enemy. While you can put it into a game with multiple snakes, it
 -- will only look at the closest enemy when deciding the next move
 -- to make.
-if #gameState[ 'snakes' ][ 'data' ] > 2 then
+if #gameState[ 'board' ][ 'snakes' ] > 2 then
     log( DEBUG, "WARNING: Multiple enemies detected. Choosing the closest snake for behavior prediction." )
 end
 
@@ -74,15 +76,15 @@ end
 local me = gameState[ 'you' ]
 local enemy = nil
 local distance = 99999
-for i = 1, #gameState[ 'snakes' ][ 'data' ] do
-    if gameState[ 'snakes' ][ 'data' ][ i ][ 'id' ] ~= me[ 'id' ] then
+for i = 1, #gameState[ 'board' ][ 'snakes' ] do
+    if gameState[ 'board' ][ 'snakes' ][ i ][ 'id' ] ~= me[ 'id' ] then
         local d = mdist(
-            me[ 'body' ][ 'data' ][1],
-            gameState[ 'snakes' ][ 'data' ][ i ][ 'body' ][ 'data' ][1]
+            me[ 'body' ][1],
+            gameState[ 'board' ][ 'snakes' ][ i ][ 'body' ][1]
         )
         if d < distance then
             distance = d
-            enemy = gameState[ 'snakes' ][ 'data' ][ i ]
+            enemy = gameState[ 'board' ][ 'snakes' ][ i ]
         end
     end
 end
@@ -117,11 +119,11 @@ end
 -- later gets out of the way)
 if not bestMove then
     log( DEBUG, "WARNING: No move returned from alphabeta!" )
-    local my_moves = neighbours( myState[ 'me' ][ 'body' ][ 'data' ][1], grid )
-    local enemy_moves = neighbours( myState[ 'enemy' ][ 'body' ][ 'data' ][1], grid )
+    local my_moves = neighbours( myState[ 'me' ][ 'body' ][1], grid )
+    local enemy_moves = neighbours( myState[ 'enemy' ][ 'body' ][1], grid )
     local safe_moves = util.n_complement( my_moves, enemy_moves )
     
-    if #myState[ 'me' ][ 'body' ][ 'data' ] <= #myState[ 'enemy' ][ 'body' ][ 'data' ] and #safe_moves > 0 then
+    if #myState[ 'me' ][ 'body' ] <= #myState[ 'enemy' ][ 'body' ] and #safe_moves > 0 then
         -- We're smaller than the enemy and there's one or more safe squares (a square that
         -- we can reach and the enemy can not) available - prefer those squares.
         log( DEBUG, "Moving to a random safe neighbour." )
@@ -140,7 +142,7 @@ if not bestMove then
         -- This just prefers snake deaths over wall deaths, so that the official battlesnake
         -- unit tests pass.
         log( DEBUG, "FATAL: No free neighbours. I'm going to die. Trying to avoid a wall..." )
-        my_moves = neighbours( myState[ 'me' ][ 'body' ][ 'data' ][1], grid, true )
+        my_moves = neighbours( myState[ 'me' ][ 'body' ][1], grid, true )
         bestMove = my_moves[ math.random( #my_moves ) ]
     end
 end
@@ -150,16 +152,16 @@ end
 -- to the game board. It always goes left.
 if not bestMove then
     log( DEBUG, "FATAL: Wall collision unavoidable. I'm going to die. Moving left!" )
-    bestMove = { x = me[ 'body' ][ 'data' ][1][ 'x' ] - 1, y = me[ 'body' ][ 'data' ][1][ 'y' ] }
+    bestMove = { x = me[ 'body' ][1][ 'x' ] - 1, y = me[ 'body' ][1][ 'y' ] }
 end
 
 -- Move to the destination we decided on
-local dir = util.direction( me[ 'body' ][ 'data' ][1], bestMove )
+local dir = util.direction( me[ 'body' ][1], bestMove )
 log( DEBUG, string.format( 'Decision: Moving %s to [%s,%s]', dir, bestMove[ 'x' ], bestMove[ 'y' ] ) )
 
 
 -- Return response to the arena
-local response = { move = dir, taunt = util.taunt() }
+local response = { move = dir }
 ngx.print( cjson.encode(response) )
 
 

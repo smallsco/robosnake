@@ -38,26 +38,6 @@ end
 ]]
 
 
---- Generates insults. Those less or eq to 40 characters
--- are readable on the official game board.
--- @return a random insult
-function util.taunt()
-    local taunts = {
-	"You are better at only one thing. Dying.",
-        "Are you a CEO for equifax?",
-        "Your snake is a little ssssssssssssucky.",
-        "You are impossible to underestimate.",
-        "You ninnyhammer.",
-        "May your foot be itchy and arms short.",
-        "Tech yourself before you wreck yourself",
-        "Hey Dad, can you do THIS?",
-        "Still better than Aleksiy's snake.",
-        "Justin Bieber? Sorry, I ate him."
-    }
-    return taunts[ random( #taunts ) ]
-end
-
-
 --- Take the BattleSnake arena's state JSON and use it to create our own grid
 -- @param gameState The arena's game state JSON
 -- @return A 2D table with each cell mapped to food, snakes, etc.
@@ -66,25 +46,25 @@ function util.buildWorldMap( gameState )
     -- Generate the tile grid
     log( DEBUG, 'Generating tile grid' )
     local grid = {}
-    for y = 1, gameState[ 'height' ] do
+    for y = 1, gameState[ 'board' ][ 'height' ] do
         grid[ y ] = {}
-        for x = 1, gameState[ 'width' ] do
+        for x = 1, gameState[ 'board' ][ 'width' ] do
             grid[ y ][ x ] = '.'
         end
     end
     
     -- Place food
-    for i = 1, #gameState[ 'food' ][ 'data' ] do
-        local food = gameState[ 'food' ][ 'data' ][i]
+    for i = 1, #gameState[ 'board' ][ 'food' ] do
+        local food = gameState[ 'board' ][ 'food' ][i]
         grid[ food[ 'y' ] ][ food[ 'x' ] ] = 'O'
         log( DEBUG, string.format( 'Placed food at [%s, %s]', food[ 'x' ], food[ 'y' ] ) )
     end
     
     -- Place living snakes
-    for i = 1, #gameState[ 'snakes' ][ 'data' ] do
-        local length = #gameState[ 'snakes' ][ 'data' ][ i ][ 'body' ][ 'data' ]
+    for i = 1, #gameState[ 'board' ][ 'snakes' ] do
+        local length = #gameState[ 'board' ][ 'snakes' ][ i ][ 'body' ]
         for j = 1, length do
-            local snake = gameState[ 'snakes' ][ 'data' ][ i ][ 'body' ][ 'data' ][ j ]
+            local snake = gameState[ 'board' ][ 'snakes' ][ i ][ 'body' ][ j ]
             if j == 1 then
                 grid[ snake[ 'y' ] ][ snake[ 'x' ] ] = '@'
                 log( DEBUG, string.format( 'Placed snake head at [%s, %s]', snake[ 'x' ], snake[ 'y' ] ) )
