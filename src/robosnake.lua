@@ -93,17 +93,17 @@ for i = 1, #gameState[ 'board' ][ 'snakes' ] do
 end
 
 if #possibleEnemies > 1 then
-    -- There's more than one snake that's an equal distance from me!! So let's pick the longest snake.
-    log( INFO, "WARNING: Multiple enemies with an equal distance to me. Choosing longest enemy for behavior prediction." )
-    local longestLength = 0
+    -- There's more than one snake that's an equal distance from me!! So let's pick the shortest snake.
+    log( INFO, "WARNING: Multiple enemies with an equal distance to me. Choosing shortest enemy for behavior prediction." )
+    local shortestLength = 99999
     local newPossibleEnemies = {}
     log( INFO, string.format("%s %s", me[ 'name' ], #me[ 'body' ]) )
     for i = 1, #possibleEnemies do
         log( INFO, string.format("%s %s", possibleEnemies[i][ 'name' ], #possibleEnemies[i][ 'body' ]) )
-        if #possibleEnemies[i][ 'body' ] == longestLength then
+        if #possibleEnemies[i][ 'body' ] == shortestLength then
             table.insert( newPossibleEnemies, possibleEnemies[i] )
-        elseif #possibleEnemies[i][ 'body' ] > longestLength then
-            longestLength = #possibleEnemies[i][ 'body' ]
+        elseif #possibleEnemies[i][ 'body' ] < shortestLength then
+            shortestLength = #possibleEnemies[i][ 'body' ]
             newPossibleEnemies = { possibleEnemies[i] }
         end
     end
@@ -173,44 +173,15 @@ end
 -- later gets out of the way)
 if not bestMove then
     log( INFO, "WARNING: No move returned from alphabeta!" )
-    local my_moves = neighbours( me[ 'body' ][1], grid )
-    local safe_moves = neighbours( me[ 'body' ][1], grid )
-    
-    -- safe moves are squares where we can move into that a
-    -- larger or equal sized enemy cannot move into
-    for i = 1, #gameState[ 'board' ][ 'snakes' ] do
-        if gameState[ 'board' ][ 'snakes' ][ i ][ 'id' ] ~= me[ 'id' ] then
-            if #gameState[ 'board' ][ 'snakes' ][ i ][ 'body' ] >= #me[ 'body' ] then
-                local enemy_moves = neighbours( gameState[ 'board' ][ 'snakes' ][ i ][ 'body' ][1], grid )
-                safe_moves = util.n_complement( safe_moves, enemy_moves )
-            end
-        end
-    end
-    
-    if #safe_moves > 0 then
-        -- FIXME: use floodfill instead of picking randomly
-        log( INFO, "Moving to a random safe neighbour." )
-        bestMove = safe_moves[ math.random( #safe_moves ) ]
-    elseif #my_moves > 0 then
-        -- We're _larger_ than the enemy, or we're smaller but there are no safe squares
-        -- available - we may end up in a head-on-head collision.
-        log( INFO, "Moving to a random free neighbour." )
-        bestMove = my_moves[ math.random( #my_moves ) ]
-    else
-        -- If we reach this point, there isn't anywhere safe to move to and we're going to die.
-        -- This just prefers snake deaths over wall deaths, so that the official battlesnake
-        -- unit tests pass.
-        log( INFO, "FATAL: No free neighbours. I'm going to die. Trying to avoid a wall..." )
-        my_moves = neighbours( me[ 'body' ][1], grid, true )
-        bestMove = my_moves[ math.random( #my_moves ) ]
-    end
+    bestMove = algorithm.failsafe( me, gameState[ 'board' ][ 'snakes' ], grid, #gameState[ 'board' ][ 'food' ] )
 end
 
 -- FAILSAFE #2
--- We're dead. This only exists to ensure that we always return a valid JSON response
--- to the game board. It always goes left.
+-- If we reach this point, there isn't anywhere safe to move to and we're going to die.
+-- This only exists to ensure that we always return a valid JSON response to the game
+-- board. It always goes left.
 if not bestMove then
-    log( INFO, "FATAL: Wall collision unavoidable. I'm going to die. Moving left!" )
+    log( INFO, "FATAL: No free neighbours. I'm going to die. Moving left!" )
     bestMove = { x = me[ 'body' ][1][ 'x' ] - 1, y = me[ 'body' ][1][ 'y' ] }
 end
 

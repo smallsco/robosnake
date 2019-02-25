@@ -4,6 +4,7 @@ local algorithm = {}
 -- Lua optimization: any functions from another module called more than once
 -- are faster if you create a local reference to that function.
 local DEBUG = ngx.DEBUG
+local INFO = ngx.INFO
 local log = ngx.log
 local mdist = util.mdist
 local n_complement = util.n_complement
@@ -285,6 +286,54 @@ function algorithm.neighbours( pos, grid, failsafe )
     end
     
     return neighbours
+end
+
+
+function algorithm.failsafe( me, snakes, grid, food_count )
+    local my_moves = algorithm.neighbours( me[ 'body' ][1], grid )
+    local safe_moves = algorithm.neighbours( me[ 'body' ][1], grid )
+    
+    -- safe moves are squares where we can move into that a
+    -- larger or equal sized enemy cannot move into
+    for i = 1, #snakes do
+        if snakes[ i ][ 'id' ] ~= me[ 'id' ] then
+            if #snakes[ i ][ 'body' ] >= #me[ 'body' ] then
+                local enemy_moves = algorithm.neighbours( snakes[ i ][ 'body' ][1], grid )
+                safe_moves = n_complement( safe_moves, enemy_moves )
+            end
+        end
+    end
+    
+    local bestMove = nil
+    if #safe_moves > 0 then
+        bestMove = safe_moves[1]
+        local most_accessible_squares = 0
+        local floodfill_depth = ( 2 * #me[ 'body' ] ) + food_count
+        for i = 1, #safe_moves do
+            local floodfill_grid = deepcopy( grid )
+            local accessible_squares = floodfill( safe_moves[i], floodfill_grid, 0, floodfill_depth )
+            if accessible_squares > most_accessible_squares then
+                bestMove = safe_moves[i]    
+            end
+        end
+        log( INFO, "Moving to the safe neighbour with maximum space." )
+    elseif #my_moves > 0 then
+        -- We're _larger_ than the enemy, or we're smaller but there are no safe squares
+        -- available - we may end up in a head-on-head collision.
+        bestMove = my_moves[1]
+        local most_accessible_squares = 0
+        local floodfill_depth = ( 2 * #me[ 'body' ] ) + food_count
+        for i = 1, #my_moves do
+            local floodfill_grid = deepcopy( grid )
+            local accessible_squares = floodfill( my_moves[i], floodfill_grid, 0, floodfill_depth )
+            if accessible_squares > most_accessible_squares then
+                bestMove = my_moves[i]    
+            end
+        end
+        log( INFO, "Moving to the free neighbour with maximum space." )
+    end
+    
+    return bestMove
 end
 
 
