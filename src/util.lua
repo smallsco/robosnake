@@ -4,6 +4,7 @@ local util = {}
 -- Lua optimization: any functions from another module called more than once
 -- are faster if you create a local reference to that function.
 local DEBUG = ngx.DEBUG
+local INFO = ngx.INFO
 local log = ngx.log
 local random = math.random
 

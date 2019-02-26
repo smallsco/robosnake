@@ -104,23 +104,23 @@ local function heuristic( grid, state, my_moves, enemy_moves )
             score = score + 2147483647
         elseif #state[ 'me' ][ 'body' ] < #state[ 'enemy' ][ 'body' ] then
             log( DEBUG, 'I am smaller and lose.' )
-            return -2147483648
+            score = score - 2147483648
         else
             -- do not use negative infinity here.
             -- draws are better than losing because the bounty cannot be claimed without a clear victor.
             log( DEBUG, "It's a draw." )
-            return -2147483647  -- one less than max int size
+            score = score - 2147483647  -- one less than max int size
         end
     end
 
     -- My win/loss conditions
     if #my_moves == 0 then
         log( DEBUG, 'I am trapped.' )
-        return -2147483648
+        score = score - 2147483648
     end
     if state[ 'me' ][ 'health' ] <= 0 then
         log( DEBUG, 'I am out of health.' )
-        return -2147483648
+        score = score - 2147483648
     end
     
     -- get food from grid since it's a pain to update state every time we pass through minimax
@@ -144,13 +144,22 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     floodfill_grid[ state[ 'me' ][ 'body' ][1][ 'y' ] ][ state[ 'me' ][ 'body' ][1][ 'x' ] ] = '.'
     local floodfill_depth = ( 2 * #state[ 'me' ][ 'body' ] ) + #food
     local accessible_squares = floodfill( state[ 'me' ][ 'body' ][1], floodfill_grid, 0, floodfill_depth )
+    
+    -- try to work around the issue of not eating when using the floodfill heuristic
+    if #state[ 'me' ][ 'body' ] > 1
+       and state[ 'me' ][ 'body' ][ #state[ 'me' ][ 'body' ] ][ 'x' ] == state[ 'me' ][ 'body' ][ #state[ 'me' ][ 'body' ] - 1 ][ 'x' ]
+       and state[ 'me' ][ 'body' ][ #state[ 'me' ][ 'body' ] ][ 'y' ] == state[ 'me' ][ 'body' ][ #state[ 'me' ][ 'body' ] - 1 ][ 'y' ]
+    then
+        accessible_squares = accessible_squares + 1    
+    end
+    
     local percent_accessible = accessible_squares / ( #grid * #grid[1] )
     
     -- If the number of squares I can see from my current position is less than my length
     -- then moving to this position *may* trap and kill us, and should be avoided if possible
     if accessible_squares <= #state[ 'me' ][ 'body' ] then
         log( DEBUG, 'I smell a trap!' )
-        return -9999999 * ( 1 / percent_accessible )
+        score = score - ( 9999999 * ( 1 / percent_accessible ) )
     end
 
     
@@ -171,6 +180,15 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     enemy_floodfill_grid[ state[ 'enemy' ][ 'body' ][1][ 'y' ] ][ state[ 'enemy' ][ 'body' ][1][ 'x' ] ] = '.'
     local enemy_floodfill_depth = ( 2 * #state[ 'enemy' ][ 'body' ] ) + #food
     local enemy_accessible_squares = floodfill( state[ 'enemy' ][ 'body' ][1], enemy_floodfill_grid, 0, enemy_floodfill_depth )
+    
+    -- try to work around the issue of not eating when using the floodfill heuristic
+    if #state[ 'enemy' ][ 'body' ] > 1
+       and state[ 'enemy' ][ 'body' ][ #state[ 'enemy' ][ 'body' ] ][ 'x' ] == state[ 'enemy' ][ 'body' ][ #state[ 'enemy' ][ 'body' ] - 1 ][ 'x' ]
+       and state[ 'enemy' ][ 'body' ][ #state[ 'enemy' ][ 'body' ] ][ 'y' ] == state[ 'enemy' ][ 'body' ][ #state[ 'enemy' ][ 'body' ] - 1 ][ 'y' ]
+    then
+        enemy_accessible_squares = enemy_accessible_squares + 1    
+    end
+    
     local enemy_percent_accessible = enemy_accessible_squares / ( #grid * #grid[1] )
     
     -- If the number of squares the enemy can see from their current position is less than their length
@@ -180,16 +198,20 @@ local function heuristic( grid, state, my_moves, enemy_moves )
         score = score + 9999999
     end
     
-    -- If there's food on the board, and I'm hungry, go for it
-    -- If I'm not hungry, ignore it
+    -- Decide how aggressive and how hungry to be.
     local foodWeight = 0
+    local aggressiveWeight = 100
     if #food <= LOW_FOOD then
+        aggressiveWeight = state[ 'me' ][ 'health' ]
         foodWeight = 200 - ( 2 * state[ 'me' ][ 'health' ] )
     else
-        if state[ 'me' ][ 'health' ] <= HUNGER_HEALTH or #state[ 'me' ][ 'body' ] < 4 then
+        if state[ 'me' ][ 'health' ] <= HUNGER_HEALTH or #state[ 'me' ][ 'body' ][ 'data' ] < 4 then
             foodWeight = 100 - state[ 'me' ][ 'health' ]
         end
     end
+    
+    -- If there's food on the board, and I'm hungry, go for it
+    -- If I'm not hungry, ignore it
     log( DEBUG, 'Food Weight: ' .. foodWeight )
     if foodWeight > 0 then
         for i = 1, #food do
@@ -202,10 +224,6 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     end
 
     -- Hang out near the enemy's head
-    local aggressiveWeight = 100
-    if #food <= LOW_FOOD then
-        aggressiveWeight = state[ 'me' ][ 'health' ]
-    end
     local kill_squares = algorithm.neighbours( state[ 'enemy' ][ 'body' ][1], grid )
     local enemy_last_direction = util.direction( state[ 'enemy' ][ 'body' ][2], state[ 'enemy' ][ 'body' ][1] )
     for i = 1, #kill_squares do
@@ -231,7 +249,7 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     end
      
     -- Hang out near the center
-    -- Temporarily Disabled
+    -- Unused, but keep it around in case they ever bring gold back.
     --[[local center_x = math.ceil( #grid[1] / 2 )
     local center_y = math.ceil( #grid / 2 )
     local dist = mdist( state[ 'me' ][ 'body' ][1], { x = center_x, y = center_y } )
@@ -313,7 +331,8 @@ function algorithm.failsafe( me, snakes, grid, food_count )
             local floodfill_grid = deepcopy( grid )
             local accessible_squares = floodfill( safe_moves[i], floodfill_grid, 0, floodfill_depth )
             if accessible_squares > most_accessible_squares then
-                bestMove = safe_moves[i]    
+                bestMove = safe_moves[i]
+                most_accessible_squares = accessible_squares
             end
         end
         log( INFO, "Moving to the safe neighbour with maximum space." )
@@ -328,6 +347,7 @@ function algorithm.failsafe( me, snakes, grid, food_count )
             local accessible_squares = floodfill( my_moves[i], floodfill_grid, 0, floodfill_depth )
             if accessible_squares > most_accessible_squares then
                 bestMove = my_moves[i]    
+                most_accessible_squares = accessible_squares
             end
         end
         log( INFO, "Moving to the free neighbour with maximum space." )
