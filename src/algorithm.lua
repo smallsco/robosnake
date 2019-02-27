@@ -209,6 +209,10 @@ local function heuristic( grid, state, my_moves, enemy_moves )
             foodWeight = 100 - state[ 'me' ][ 'health' ]
         end
     end
+    if state[ 'numSnakes' ] > 2 then
+        foodWeight = 1
+        aggressiveWeight = 0
+    end
     
     -- If there's food on the board, and I'm hungry, go for it
     -- If I'm not hungry, ignore it
