@@ -3,7 +3,6 @@ FROM openresty/openresty:1.13.6.2-bionic
 
 # Remove default nginx config and install Robosnake's config
 RUN rm -f /etc/nginx/conf.d/default.conf
-RUN rm -f /usr/local/openresty/nginx/conf/nginx.conf.default
 COPY config/http.conf /etc/nginx/conf.d/
 COPY config/server.prod.conf /etc/nginx/conf.d/server.conf
 
@@ -13,3 +12,4 @@ WORKDIR /var/luasnake
 COPY src/* ./
 COPY docker-entrypoint.sh ./
 
+CMD sed -i -e 's/$PORT/'"$PORT"'/g' /etc/nginx/conf.d/server.conf && /usr/local/openresty/bin/openresty -g 'daemon off;'
