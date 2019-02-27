@@ -1,4 +1,5 @@
-FROM openresty/openresty:1.13.6.2-alpine
+#FROM openresty/openresty:1.13.6.2-alpine
+FROM openresty/openresty:1.13.6.2-bionic
 
 # Remove default nginx config and install Robosnake's config
 RUN rm -f /etc/nginx/conf.d/default.conf
