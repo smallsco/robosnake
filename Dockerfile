@@ -9,3 +9,6 @@ COPY config/server.prod.conf /etc/nginx/conf.d/server.conf
 RUN mkdir -p /var/luasnake
 WORKDIR /var/luasnake
 COPY src/* ./
+
+# Entrypoint for Heroku
+CMD ["/usr/local/openresty/bin/openresty", "-g", "daemon off;"]
