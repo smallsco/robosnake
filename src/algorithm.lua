@@ -229,7 +229,10 @@ local function heuristic( grid, state, my_moves, enemy_moves )
 
     -- Hang out near the enemy's head
     local kill_squares = algorithm.neighbours( state[ 'enemy' ][ 'body' ][1], grid )
-    local enemy_last_direction = util.direction( state[ 'enemy' ][ 'body' ][2], state[ 'enemy' ][ 'body' ][1] )
+    local enemy_last_direction = nil
+    if #state[ 'enemy' ][ 'body' ] > 1 then
+        enemy_last_direction = util.direction( state[ 'enemy' ][ 'body' ][2], state[ 'enemy' ][ 'body' ][1] )
+    end
     for i = 1, #kill_squares do
         local dist = mdist( state[ 'me' ][ 'body' ][1], kill_squares[i] )
         local direction = util.direction( state[ 'enemy' ][ 'body' ][1], kill_squares[i] )
