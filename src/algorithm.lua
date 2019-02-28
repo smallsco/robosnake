@@ -248,10 +248,19 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     -- Avoid possible tunnels
     local my_neighbours = algorithm.neighbours( state[ 'me' ][ 'body' ][1], grid )
     if #my_neighbours == 1 then
+        log( DEBUG, 'I am in a tunnel!' )
         score = score - 50000
     end
     
+    -- Try to put the enemy into possible tunnels
+    local enemy_neighbours = algorithm.neighbours( state[ 'enemy' ][ 'body' ][1], grid )
+    if #enemy_neighbours == 1 then
+        log( DEBUG, 'Enemy is in a tunnel!' )
+        score = score + 50000
+    end
+    
     -- Avoid the edge of the game board
+    -- Disabled while we play with tunnel detection
     --[[if
         state[ 'me' ][ 'body' ][1][ 'x' ] == 1
         or state[ 'me' ][ 'body' ][1][ 'x' ] == #grid[1]
