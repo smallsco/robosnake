@@ -245,15 +245,21 @@ local function heuristic( grid, state, my_moves, enemy_moves )
         end
     end
     
+    -- Avoid possible tunnels
+    local my_neighbours = algorithm.neighbours( state[ 'me' ][ 'body' ][1], grid )
+    if #my_neighbours == 1 then
+        score = score - 50000
+    end
+    
     -- Avoid the edge of the game board
-    if
+    --[[if
         state[ 'me' ][ 'body' ][1][ 'x' ] == 1
         or state[ 'me' ][ 'body' ][1][ 'x' ] == #grid[1]
         or state[ 'me' ][ 'body' ][1][ 'y' ] == 1
         or state[ 'me' ][ 'body' ][1][ 'y' ] == #grid
     then
         score = score - 25000
-    end
+    end]]
      
     -- Hang out near the center
     -- Unused, but keep it around in case they ever bring gold back.
