@@ -209,7 +209,7 @@ local function heuristic( grid, state, my_moves, enemy_moves )
             foodWeight = 100 - state[ 'me' ][ 'health' ]
         end
     end
-    if state[ 'numSnakes' ] > 2 then
+    if state[ 'numSnakes' ] > 4 then
         foodWeight = 1
         aggressiveWeight = 0
     end
