@@ -260,15 +260,14 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     end
     
     -- Avoid the edge of the game board
-    -- Disabled while we play with tunnel detection
-    --[[if
+    if
         state[ 'me' ][ 'body' ][1][ 'x' ] == 1
         or state[ 'me' ][ 'body' ][1][ 'x' ] == #grid[1]
         or state[ 'me' ][ 'body' ][1][ 'y' ] == 1
         or state[ 'me' ][ 'body' ][1][ 'y' ] == #grid
     then
         score = score - 25000
-    end]]
+    end
      
     -- Hang out near the center
     -- Unused, but keep it around in case they ever bring gold back.
@@ -439,7 +438,7 @@ function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMo
     end
     
     -- Remove last segment from all snakes on the board. 
-    --[[for i = 1, #state[ 'snakes' ] do
+    for i = 1, #state[ 'snakes' ] do
         if state[ 'snakes' ][ i ][ 'id' ] ~= state[ 'me' ][ 'id' ]
            and state[ 'snakes' ][ i ][ 'id' ] ~= state[ 'enemy' ][ 'id' ]
         then
@@ -461,7 +460,7 @@ function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMo
                 table.remove( state[ 'snakes' ][i][ 'body' ] )
             end
         end
-    end]]
+    end
   
     if maximizingPlayer then
         for i = 1, #moves do
