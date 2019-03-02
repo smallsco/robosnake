@@ -209,7 +209,7 @@ local function heuristic( grid, state, my_moves, enemy_moves )
             foodWeight = 100 - state[ 'me' ][ 'health' ]
         end
     end
-    if state[ 'numSnakes' ] > 4 then
+    if #state[ 'snakes' ] > 4 then
         foodWeight = 1
         aggressiveWeight = 0
     end
@@ -437,6 +437,31 @@ function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMo
         end
         return heuristic( grid, state, my_moves, enemy_moves )
     end
+    
+    -- Remove last segment from all snakes on the board. 
+    --[[for i = 1, #state[ 'snakes' ] do
+        if state[ 'snakes' ][ i ][ 'id' ] ~= state[ 'me' ][ 'id' ]
+           and state[ 'snakes' ][ i ][ 'id' ] ~= state[ 'enemy' ][ 'id' ]
+        then
+            local length = #state[ 'snakes' ][ i ][ 'body' ]
+            if length > 1
+               and state[ 'snakes' ][i][ 'body' ][ length ][ 'x' ] == state[ 'snakes' ][i][ 'body' ][ length - 1 ][ 'x' ]
+               and state[ 'snakes' ][i][ 'body' ][ length ][ 'y' ] == state[ 'snakes' ][i][ 'body' ][ length - 1 ][ 'y' ]
+            then
+                grid[ state[ 'snakes' ][i][ 'body' ][ length ][ 'y' ] ][ state[ 'snakes' ][i][ 'body' ][ length ][ 'x' ] ] = '*'
+                table.remove( state[ 'snakes' ][i][ 'body' ] )
+            elseif length == 0 then
+                -- do nothing
+            elseif length == 1 then
+                grid[ state[ 'snakes' ][i][ 'body' ][ length ][ 'y' ] ][ state[ 'snakes' ][i][ 'body' ][ length ][ 'x' ] ] = '.'
+                table.remove( state[ 'snakes' ][i][ 'body' ] )
+            else
+                grid[ state[ 'snakes' ][i][ 'body' ][ length ][ 'y' ] ][ state[ 'snakes' ][i][ 'body' ][ length ][ 'x' ] ] = '.'
+                grid[ state[ 'snakes' ][i][ 'body' ][ length - 1 ][ 'y' ] ][ state[ 'snakes' ][i][ 'body' ][ length - 1 ][ 'x' ] ] = '*'
+                table.remove( state[ 'snakes' ][i][ 'body' ] )
+            end
+        end
+    end]]
   
     if maximizingPlayer then
         for i = 1, #moves do

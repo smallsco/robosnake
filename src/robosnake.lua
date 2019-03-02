@@ -93,26 +93,37 @@ for i = 1, #gameState[ 'board' ][ 'snakes' ] do
 end
 
 if #possibleEnemies > 1 then
-    -- There's more than one snake that's an equal distance from me!! So let's pick the shortest snake.
-    log( INFO, "WARNING: Multiple enemies with an equal distance to me. Choosing shortest enemy for behavior prediction." )
-    local shortestLength = 99999
-    local newPossibleEnemies = {}
-    log( INFO, string.format("%s %s", me[ 'name' ], #me[ 'body' ]) )
-    for i = 1, #possibleEnemies do
-        log( INFO, string.format("%s %s", possibleEnemies[i][ 'name' ], #possibleEnemies[i][ 'body' ]) )
-        if #possibleEnemies[i][ 'body' ] == shortestLength then
-            table.insert( newPossibleEnemies, possibleEnemies[i] )
-        elseif #possibleEnemies[i][ 'body' ] < shortestLength then
-            shortestLength = #possibleEnemies[i][ 'body' ]
-            newPossibleEnemies = { possibleEnemies[i] }
-        end
-    end
-    if #newPossibleEnemies == 1 then
-        -- We've successfully reduced the number of targets to just one!
-        enemy = newPossibleEnemies[1]
+    
+    -- only care if they're close
+    if mdist( me[ 'body' ][1], possibleEnemies[1][ 'body' ][1] ) >= 4 then
+        enemy = possibleEnemies[1]
     else
-        log( INFO, "CRITICAL: Multiple enemies with an equal distance to me and equal length. ABANDONING BEHAVIOR PREDICTION." )
-        enemy = nil
+    
+        -- There's more than one snake that's an equal distance from me!! So let's pick the shortest snake.
+        log( INFO, "WARNING: Multiple enemies with an equal distance to me. Choosing shortest enemy for behavior prediction." )
+        local shortestLength = 99999
+        local newPossibleEnemies = {}
+        log( INFO, string.format("%s %s", me[ 'name' ], #me[ 'body' ]) )
+        for i = 1, #possibleEnemies do
+            log( INFO, string.format("%s %s", possibleEnemies[i][ 'name' ], #possibleEnemies[i][ 'body' ]) )
+            if #possibleEnemies[i][ 'body' ] == shortestLength then
+                table.insert( newPossibleEnemies, possibleEnemies[i] )
+            elseif #possibleEnemies[i][ 'body' ] < shortestLength then
+                shortestLength = #possibleEnemies[i][ 'body' ]
+                newPossibleEnemies = { possibleEnemies[i] }
+            end
+        end
+        if #newPossibleEnemies == 1 then
+            -- We've successfully reduced the number of targets to just one!
+            enemy = newPossibleEnemies[1]
+        else
+            --[[log( INFO, "CRITICAL: Multiple enemies with an equal distance to me and equal length. ABANDONING BEHAVIOR PREDICTION." )
+            enemy = nil]]
+            
+            log( INFO, "CRITICAL: Multiple enemies with an equal distance to me and equal length. PICKING RANDOM ENEMY." )
+            enemy = newPossibleEnemies[1]
+        end
+    
     end
 elseif #possibleEnemies == 1 then
     -- There's just one snake on the board that's closer to me than any other snake
@@ -135,7 +146,7 @@ if enemy then
     local myState = {
         me = me,
         enemy = enemy,
-        numSnakes = #gameState[ 'board' ][ 'snakes' ]
+        snakes = gameState[ 'board' ][ 'snakes' ]
     }
     local abgrid = util.buildWorldMap( gameState )
     
