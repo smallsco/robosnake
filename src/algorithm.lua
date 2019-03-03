@@ -209,7 +209,7 @@ local function heuristic( grid, state, my_moves, enemy_moves )
             foodWeight = 100 - state[ 'me' ][ 'health' ]
         end
     end
-    if state[ 'numSnakes' ] > 4 then
+    if #state[ 'snakes' ] > 4 then
         foodWeight = 1
         aggressiveWeight = 0
     end
@@ -260,15 +260,14 @@ local function heuristic( grid, state, my_moves, enemy_moves )
     end
     
     -- Avoid the edge of the game board
-    -- Disabled while we play with tunnel detection
-    --[[if
+    if
         state[ 'me' ][ 'body' ][1][ 'x' ] == 1
         or state[ 'me' ][ 'body' ][1][ 'x' ] == #grid[1]
         or state[ 'me' ][ 'body' ][1][ 'y' ] == 1
         or state[ 'me' ][ 'body' ][1][ 'y' ] == #grid
     then
         score = score - 25000
-    end]]
+    end
      
     -- Hang out near the center
     -- Unused, but keep it around in case they ever bring gold back.
@@ -436,6 +435,31 @@ function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMo
             log( DEBUG, 'Reached endgame state.' )
         end
         return heuristic( grid, state, my_moves, enemy_moves )
+    end
+    
+    -- Remove last segment from all snakes on the board. 
+    for i = 1, #state[ 'snakes' ] do
+        if state[ 'snakes' ][ i ][ 'id' ] ~= state[ 'me' ][ 'id' ]
+           and state[ 'snakes' ][ i ][ 'id' ] ~= state[ 'enemy' ][ 'id' ]
+        then
+            local length = #state[ 'snakes' ][ i ][ 'body' ]
+            if length > 1
+               and state[ 'snakes' ][i][ 'body' ][ length ][ 'x' ] == state[ 'snakes' ][i][ 'body' ][ length - 1 ][ 'x' ]
+               and state[ 'snakes' ][i][ 'body' ][ length ][ 'y' ] == state[ 'snakes' ][i][ 'body' ][ length - 1 ][ 'y' ]
+            then
+                grid[ state[ 'snakes' ][i][ 'body' ][ length ][ 'y' ] ][ state[ 'snakes' ][i][ 'body' ][ length ][ 'x' ] ] = '*'
+                table.remove( state[ 'snakes' ][i][ 'body' ] )
+            elseif length == 0 then
+                -- do nothing
+            elseif length == 1 then
+                grid[ state[ 'snakes' ][i][ 'body' ][ length ][ 'y' ] ][ state[ 'snakes' ][i][ 'body' ][ length ][ 'x' ] ] = '.'
+                table.remove( state[ 'snakes' ][i][ 'body' ] )
+            else
+                grid[ state[ 'snakes' ][i][ 'body' ][ length ][ 'y' ] ][ state[ 'snakes' ][i][ 'body' ][ length ][ 'x' ] ] = '.'
+                grid[ state[ 'snakes' ][i][ 'body' ][ length - 1 ][ 'y' ] ][ state[ 'snakes' ][i][ 'body' ][ length - 1 ][ 'x' ] ] = '*'
+                table.remove( state[ 'snakes' ][i][ 'body' ] )
+            end
+        end
     end
   
     if maximizingPlayer then
