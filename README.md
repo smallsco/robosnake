@@ -18,6 +18,15 @@ In previous years it was [Redbrick](http://www.rdbrck.com)'s bounty snake. You c
 * 2018: https://github.com/rdbrck/bountysnake2018
 
 
+## 2019 Results
+Robo did not compete in the 2019 tournament however it did challenge a number of Bounty Snakes:
+
+* **Defeated:** Pixel Union, Schneider Electric, Workday, Semaphore, Bambora, Rooof, FreshWorks, Sendwithus (Level 7)
+* **Lost To:** Giftbit, Checkfront
+
+On the [play.battlesnake.io](http://play.battlesnake.io) leaderboard Robo had a high of position #7 and a low of position #29, averaging somewhere around #13.
+
+
 ## Strategy
 Robo makes use of [alpha-beta pruning](https://en.wikipedia.org/wiki/Alpha%E2%80%93beta_pruning) in order to make predictions about the future state of the game. All possible moves by ourself are evaluated, as well as all possible moves by the enemy. Robo will always select for itself the move that results in the best possible state of the game board, and it will select for the enemy the move that results in the worst possible state of the game board (from Robo's point of view, that is).
 

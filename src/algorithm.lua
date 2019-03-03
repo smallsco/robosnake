@@ -328,6 +328,12 @@ function algorithm.neighbours( pos, grid, failsafe )
 end
 
 
+-- A failsafe algorithm to run when alphabeta doesn't return a move.
+-- @param me My state
+-- @param snakes The state of all other snakes in play
+-- @param grid The game grid
+-- @param food_count The number of food on the board
+-- @return bestMove The optimal next move
 function algorithm.failsafe( me, snakes, grid, food_count )
     local my_moves = algorithm.neighbours( me[ 'body' ][1], grid )
     local safe_moves = algorithm.neighbours( me[ 'body' ][1], grid )
@@ -345,6 +351,8 @@ function algorithm.failsafe( me, snakes, grid, food_count )
     
     local bestMove = nil
     if #safe_moves > 0 then
+        -- If a safe move is available, prefer it. If multiple safe moves are available,
+        -- move to the safe neighbour with maximum space.
         bestMove = safe_moves[1]
         local most_accessible_squares = 0
         local floodfill_depth = ( 2 * #me[ 'body' ] ) + food_count
@@ -359,7 +367,8 @@ function algorithm.failsafe( me, snakes, grid, food_count )
         log( INFO, "Moving to the safe neighbour with maximum space." )
     elseif #my_moves > 0 then
         -- We're _larger_ than the enemy, or we're smaller but there are no safe squares
-        -- available - we may end up in a head-on-head collision.
+        -- available - we may end up in a head-on-head collision. Prefer the free neighbour
+        -- with maximum space.
         bestMove = my_moves[1]
         local most_accessible_squares = 0
         local floodfill_depth = ( 2 * #me[ 'body' ] ) + food_count
@@ -437,7 +446,11 @@ function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMo
         return heuristic( grid, state, my_moves, enemy_moves )
     end
     
-    -- Remove last segment from all snakes on the board. 
+    -- Remove last segment from all snakes on the board.
+    -- This is a hack because we only predict a single enemy, so by deleting the tails
+    -- of _all_ enemies from the grid as we traverse the game tree, the hope is that
+    -- we will be at least smart enough to be able to move into the former tail space of
+    -- any snake and not just the one that we are currently predicting.
     for i = 1, #state[ 'snakes' ] do
         if state[ 'snakes' ][ i ][ 'id' ] ~= state[ 'me' ][ 'id' ]
            and state[ 'snakes' ][ i ][ 'id' ] ~= state[ 'enemy' ][ 'id' ]
@@ -447,14 +460,17 @@ function algorithm.alphabeta( grid, state, depth, alpha, beta, alphaMove, betaMo
                and state[ 'snakes' ][i][ 'body' ][ length ][ 'x' ] == state[ 'snakes' ][i][ 'body' ][ length - 1 ][ 'x' ]
                and state[ 'snakes' ][i][ 'body' ][ length ][ 'y' ] == state[ 'snakes' ][i][ 'body' ][ length - 1 ][ 'y' ]
             then
+                -- snake ate so the last segment is duplicated - change grid from # to *
                 grid[ state[ 'snakes' ][i][ 'body' ][ length ][ 'y' ] ][ state[ 'snakes' ][i][ 'body' ][ length ][ 'x' ] ] = '*'
                 table.remove( state[ 'snakes' ][i][ 'body' ] )
             elseif length == 0 then
-                -- do nothing
+                -- do nothing as this snake is completely removed from the grid
             elseif length == 1 then
+                -- remove this snake from the grid completely
                 grid[ state[ 'snakes' ][i][ 'body' ][ length ][ 'y' ] ][ state[ 'snakes' ][i][ 'body' ][ length ][ 'x' ] ] = '.'
                 table.remove( state[ 'snakes' ][i][ 'body' ] )
             else
+                -- remove last segment from the grid and turn the segment before that into the new tail
                 grid[ state[ 'snakes' ][i][ 'body' ][ length ][ 'y' ] ][ state[ 'snakes' ][i][ 'body' ][ length ][ 'x' ] ] = '.'
                 grid[ state[ 'snakes' ][i][ 'body' ][ length - 1 ][ 'y' ] ][ state[ 'snakes' ][i][ 'body' ][ length - 1 ][ 'x' ] ] = '*'
                 table.remove( state[ 'snakes' ][i][ 'body' ] )
