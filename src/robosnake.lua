@@ -38,8 +38,8 @@ math.randomseed( os.time() )
 -- Get the POST request and decode the JSON
 local request_body = ngx.var.request_body
 local gameState = cjson.decode( request_body )
-log( NOTICE, string.format('---TURN %s---', gameState['turn'] ) )
-log( NOTICE, 'Got request data: ' .. request_body )
+log( DEBUG, string.format('---TURN %s---', gameState['turn'] ) )
+log( DEBUG, 'Got request data: ' .. request_body )
 
 -- Convert to 1-based indexing
 log( DEBUG, 'Converting Coordinates' )
@@ -60,7 +60,7 @@ end
 
 log( DEBUG, 'Building World Map' )
 local grid = util.buildWorldMap( gameState )
-util.printWorldMap( grid, INFO )
+util.printWorldMap( grid )
 
 
 -- This snake makes use of alpha-beta pruning to advance the gamestate
@@ -100,12 +100,12 @@ if #possibleEnemies > 1 then
     else
     
         -- There's more than one snake that's an equal distance from me!! So let's pick the shortest snake.
-        log( INFO, "WARNING: Multiple enemies with an equal distance to me. Choosing shortest enemy for behavior prediction." )
+        log( DEBUG, "WARNING: Multiple enemies with an equal distance to me. Choosing shortest enemy for behavior prediction." )
         local shortestLength = 99999
         local newPossibleEnemies = {}
-        log( INFO, string.format("%s %s", me[ 'name' ], #me[ 'body' ]) )
+        log( DEBUG, string.format("%s %s", me[ 'name' ], #me[ 'body' ]) )
         for i = 1, #possibleEnemies do
-            log( INFO, string.format("%s %s", possibleEnemies[i][ 'name' ], #possibleEnemies[i][ 'body' ]) )
+            log( DEBUG, string.format("%s %s", possibleEnemies[i][ 'name' ], #possibleEnemies[i][ 'body' ]) )
             if #possibleEnemies[i][ 'body' ] == shortestLength then
                 table.insert( newPossibleEnemies, possibleEnemies[i] )
             elseif #possibleEnemies[i][ 'body' ] < shortestLength then
@@ -117,10 +117,7 @@ if #possibleEnemies > 1 then
             -- We've successfully reduced the number of targets to just one!
             enemy = newPossibleEnemies[1]
         else
-            --[[log( INFO, "CRITICAL: Multiple enemies with an equal distance to me and equal length. ABANDONING BEHAVIOR PREDICTION." )
-            enemy = nil]]
-            
-            log( INFO, "CRITICAL: Multiple enemies with an equal distance to me and equal length. PICKING RANDOM ENEMY." )
+            log( DEBUG, "CRITICAL: Multiple enemies with an equal distance to me and equal length. PICKING RANDOM ENEMY." )
             enemy = newPossibleEnemies[1]
         end
     
@@ -142,7 +139,7 @@ local bestMove = nil
 local bestScore = nil
 if enemy then
     
-    log( INFO, 'Enemy Snake: ' .. enemy[ 'name' ] )
+    log( DEBUG, 'Enemy Snake: ' .. enemy[ 'name' ] )
     local myState = {
         me = me,
         enemy = enemy,
@@ -165,7 +162,7 @@ if enemy then
         end
     end
     
-    util.printWorldMap( abgrid, INFO )
+    util.printWorldMap( abgrid, DEBUG )
     
     bestScore, bestMove = algorithm.alphabeta( abgrid, myState, 0, -math.huge, math.huge, nil, nil, true, {}, {} )
     log( DEBUG, string.format( 'Best score: %s', bestScore ) )
@@ -183,7 +180,7 @@ end
 -- max recursion depth we are able to break free (i.e. trapped by the enemy's tail which
 -- later gets out of the way)
 if not bestMove then
-    log( INFO, "WARNING: No move returned from alphabeta!" )
+    log( DEBUG, "WARNING: No move returned from alphabeta!" )
     bestMove = algorithm.failsafe( me, gameState[ 'board' ][ 'snakes' ], grid, #gameState[ 'board' ][ 'food' ] )
 end
 
@@ -192,13 +189,13 @@ end
 -- This only exists to ensure that we always return a valid JSON response to the game
 -- board. It always goes left.
 if not bestMove then
-    log( INFO, "FATAL: No free neighbours. I'm going to die. Moving left!" )
+    log( DEBUG, "FATAL: No free neighbours. I'm going to die. Moving left!" )
     bestMove = { x = me[ 'body' ][1][ 'x' ] - 1, y = me[ 'body' ][1][ 'y' ] }
 end
 
 -- Move to the destination we decided on
 local dir = util.direction( me[ 'body' ][1], bestMove )
-log( INFO, string.format( 'Decision: Moving %s to [%s,%s]', dir, bestMove[ 'x' ], bestMove[ 'y' ] ) )
+log( DEBUG, string.format( 'Decision: Moving %s to [%s,%s]', dir, bestMove[ 'x' ], bestMove[ 'y' ] ) )
 
 
 -- Return response to the arena

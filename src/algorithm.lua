@@ -209,7 +209,7 @@ local function heuristic( grid, state, my_moves, enemy_moves )
             foodWeight = 100 - state[ 'me' ][ 'health' ]
         end
     end
-    if #state[ 'snakes' ] > 4 then
+    if #state[ 'snakes' ] > MAX_AGGRESSION_SNAKES then
         foodWeight = 1
         aggressiveWeight = 0
     end
@@ -364,7 +364,7 @@ function algorithm.failsafe( me, snakes, grid, food_count )
                 most_accessible_squares = accessible_squares
             end
         end
-        log( INFO, "Moving to the safe neighbour with maximum space." )
+        log( DEBUG, "Moving to the safe neighbour with maximum space." )
     elseif #my_moves > 0 then
         -- We're _larger_ than the enemy, or we're smaller but there are no safe squares
         -- available - we may end up in a head-on-head collision. Prefer the free neighbour
@@ -380,7 +380,7 @@ function algorithm.failsafe( me, snakes, grid, food_count )
                 most_accessible_squares = accessible_squares
             end
         end
-        log( INFO, "Moving to the free neighbour with maximum space." )
+        log( DEBUG, "Moving to the free neighbour with maximum space." )
     end
     
     return bestMove
