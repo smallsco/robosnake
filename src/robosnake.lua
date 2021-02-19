@@ -5,13 +5,13 @@
                                                                            
                     _______ _     _        _____ _____ _____               
                     |  |  | |____/           |     |     |                 
-                    |  |  | |    \_ .      __|__ __|__ __|__               
+                    |  |  | |    \_ .      __|__ __|__ __|__       (Rev. B)
                                                                            
     -----------------------------------------------------------------------
     
     @author Scott Small <smallsco@gmail.com>
     @copyright 2017-2018 Redbrick Technologies, Inc.
-    @copyright 2019 Scott Small
+    @copyright 2019-2020 Scott Small
     @license MIT
 ]]
 
@@ -19,8 +19,6 @@
 -- Lua optimization: any functions from another module called more than once
 -- are faster if you create a local reference to that function.
 local DEBUG = ngx.DEBUG
-local INFO = ngx.INFO
-local NOTICE = ngx.NOTICE
 local log = ngx.log
 local mdist = util.mdist
 local neighbours = algorithm.neighbours
@@ -197,6 +195,12 @@ end
 local dir = util.direction( me[ 'body' ][1], bestMove )
 log( DEBUG, string.format( 'Decision: Moving %s to [%s,%s]', dir, bestMove[ 'x' ], bestMove[ 'y' ] ) )
 
+-- HACK HACK HACK invert y axis for V1 API
+if dir == "down" then
+    dir = "up"
+elseif dir == "up" then
+    dir = "down"
+end
 
 -- Return response to the arena
 local response = { move = dir }
