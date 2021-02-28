@@ -5,12 +5,12 @@
                                                                        
                 _______ _     _        _____ _____ _____               
                 |  |  | |____/           |     |     |                 
-                |  |  | |    \_ .      __|__ __|__ __|__               
+                |  |  | |    \_ .      __|__ __|__ __|__       (Rev. B)
                                                                        
 ```
 
 ## About
-The Robosnake (Robo) is a snake for the 2019 [Battlesnake](http://www.battlesnake.io) AI programming competition. It is written using [Lua](https://www.lua.org/) and designed to be run under [OpenResty](http://openresty.org/).
+The Robosnake (Robo) is a snake for the [Battlesnake](http://play.battlesnake.com) AI programming competition. It is written using [Lua](https://www.lua.org/) and designed to be run under [OpenResty](http://openresty.org/).
 
 In previous years it was [Redbrick](http://www.rdbrck.com)'s bounty snake. You can see those versions here:
 
@@ -18,6 +18,7 @@ In previous years it was [Redbrick](http://www.rdbrck.com)'s bounty snake. You c
 * 2018: https://github.com/rdbrck/bountysnake2018
 
 The Mk. III is the final, canonical release of the Robosnake. It's been a great three-year run, but it's also time for something new.
+(Rev. B is a patch release to support API V1 and bump the OpenResty version - there are no logic changes)
 
 
 ## 2019 Tournament and Bounty Snake Results

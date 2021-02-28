@@ -1,4 +1,4 @@
-FROM openresty/openresty:1.17.8.2-5-alpine
+FROM openresty/openresty:1.19.3.1-4-alpine
 
 # Replace default nginx config with Robosnake's config
 COPY config/server.prod.conf /etc/nginx/conf.d/default.conf
