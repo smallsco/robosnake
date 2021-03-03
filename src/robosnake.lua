@@ -11,7 +11,7 @@
     
     @author Scott Small <smallsco@gmail.com>
     @copyright 2017-2018 Redbrick Technologies, Inc.
-    @copyright 2019-2020 Scott Small
+    @copyright 2019-2021 Scott Small
     @license MIT
 ]]
 
