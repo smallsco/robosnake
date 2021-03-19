@@ -1,0 +1,30 @@
+# fly.toml file generated for battlesnake-robo on 2021-03-18T19:32:17-07:00
+
+app = "battlesnake-robo"
+
+kill_signal = "SIGINT"
+kill_timeout = 5
+
+[[services]]
+  internal_port = 5000
+  protocol = "tcp"
+
+  [services.concurrency]
+    hard_limit = 25
+    soft_limit = 20
+
+  [[services.ports]]
+    handlers = ["http"]
+    port = "80"
+
+  [[services.ports]]
+    handlers = ["tls", "http"]
+    port = "443"
+
+  [[services.http_checks]]
+    interval = 10000
+    grace_period = "5s"
+    method = "get"
+    path = "/"
+    protocol = "http"
+    timeout = 2000

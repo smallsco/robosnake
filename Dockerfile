@@ -1,4 +1,5 @@
-FROM openresty/openresty:1.19.3.1-4-alpine
+# Using this base image because of: https://github.com/openresty/docker-openresty/issues/124
+FROM openresty/openresty:1.15.8.1-4-alpine
 
 # Replace default nginx config with Robosnake's config
 COPY config/server.prod.conf /etc/nginx/conf.d/default.conf
@@ -9,4 +10,4 @@ WORKDIR /var/luasnake
 COPY src/* ./
 
 # Entrypoint for Heroku
-CMD sed -i -e 's/XXPORTXX/'"$PORT"'/g' /etc/nginx/conf.d/default.conf && /usr/local/openresty/bin/openresty -g 'daemon off;'
+CMD /usr/local/openresty/bin/openresty -g 'daemon off;'
